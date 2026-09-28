@@ -65,6 +65,11 @@ a { color: var(--primary); }
 /* ---------- Labels & printing ---------- */
 .label { box-sizing: border-box; padding: 1.5mm 2mm; background: #fff; color: #000; display: flex; gap: 2mm; align-items: center; overflow: hidden; border-radius: 1.5mm; box-shadow: 0 0 0 1px #d0d0d0; font-family: var(--font-sans); }
 .print-area, .print-only { display: none; }
+.sheet-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 220px; aspect-ratio: 210 / 297; padding: 6px; background: var(--surface-container); border-radius: 8px; }
+.sheet-cell { border: 1px solid var(--outline); background: var(--surface); color: var(--ink-muted); border-radius: 4px; font: 600 11px var(--font-sans); cursor: pointer; }
+.sheet-cell.is-used { background: var(--surface-container-highest); color: var(--ink-disabled); text-decoration: line-through; }
+.sheet-cell.is-filled { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); }
+.sheet-cell.is-start { outline: 2px solid var(--primary); outline-offset: 1px; }
 @media print {
   html, body { background: #fff !important; }
   .rk-shell > *:not(.rk-shell__main), .app-topbar, .app-nav, .no-print, .rk-banner, .app-toasts, .app-demo { display: none !important; }
@@ -74,5 +79,8 @@ a { color: var(--primary); }
   .rk-table { box-shadow: none !important; }
   .print-area .label { box-shadow: none; border-radius: 0; break-inside: avoid; }
   .print-62x29 .label, .print-54x17 .label { page-break-after: always; }
-  .print-a4-3x8 { display: grid; grid-template-columns: repeat(3, 70mm); grid-auto-rows: 37mm; }
+  .a4-page { width: 210mm; height: 297mm; box-sizing: border-box; display: grid; grid-template-columns: repeat(3, 70mm); grid-template-rows: repeat(8, 36mm); overflow: hidden; break-after: page; page-break-after: always; }
+  .a4-page:last-child { break-after: auto; page-break-after: auto; }
+  .a4-page .label { width: 70mm !important; height: 36mm !important; }
+  .a4-test { border: 0.2mm dashed #000; display: flex; align-items: center; justify-content: center; font: 700 14pt sans-serif; color: #000; }
 }

@@ -14,10 +14,14 @@ import { useStore } from '@/lib/store';
 
 type LRow = DeviceView & { id: string };
 type Template = '62x29' | '54x17' | 'a4-3x8';
+const SHEET = { cols: 3, rows: 8 };
+const PER_SHEET = SHEET.cols * SHEET.rows;
+const PREF = 'rk.labels';
+
 const TEMPLATES: Record<Template, { label: string; w: number; h: number; page: string }> = {
   '62x29': { label: 'Etikettskrivare 62 × 29 mm', w: 62, h: 29, page: '62mm 29mm' },
   '54x17': { label: 'Etikettskrivare 54 × 17 mm', w: 54, h: 17, page: '54mm 17mm' },
-  'a4-3x8': { label: 'A4-ark 3 × 8 (70 × 37 mm)', w: 70, h: 37, page: 'A4' },
+  'a4-3x8': { label: 'A4-ark 210 × 297 mm · 3 × 8 etiketter à 70 × 36 mm', w: 70, h: 36, page: 'A4' },
 };
 
 interface Fields { qr: boolean; barcode: boolean; assetId: boolean; modell: boolean; skola: boolean; elev: boolean }
@@ -72,7 +76,23 @@ function EtiketterInner() {
   const params = useSearchParams();
   const devices = React.useMemo(() => buildDevices(store.data), [store.data]);
   const [selected, setSelected] = React.useState<string[]>([]);
-  const [template, setTemplate] = React.useState<Template>('62x29');
+  const [template, setTemplate] = React.useState<Template>('a4-3x8');
+  const [start, setStart] = React.useState(1);
+  const [marginTop, setMarginTop] = React.useState(4.5);
+  const [marginLeft, setMarginLeft] = React.useState(0);
+  const [testPrint, setTestPrint] = React.useState(false);
+  // Remember template and printer calibration on this computer.
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(PREF) || '{}');
+      if (p.template) setTemplate(p.template);
+      if (typeof p.marginTop === 'number') setMarginTop(p.marginTop);
+      if (typeof p.marginLeft === 'number') setMarginLeft(p.marginLeft);
+    } catch { /* ignore */ }
+  }, []);
+  React.useEffect(() => {
+    try { localStorage.setItem(PREF, JSON.stringify({ template, marginTop, marginLeft })); } catch { /* ignore */ }
+  }, [template, marginTop, marginLeft]);
   const [fields, setFields] = React.useState<Fields>({ qr: true, barcode: true, assetId: true, modell: true, skola: true, elev: false });
   const [copies, setCopies] = React.useState(1);
   const [scan, setScan] = React.useState('');
@@ -119,18 +139,38 @@ function EtiketterInner() {
     } else store.toast({ icon: 'error', message: `Hittar ingen enhet som matchar ${raw}` });
   };
 
-  const print = async () => {
+  const setPageStyle = () => {
     const T = TEMPLATES[template];
     const style = document.createElement('style');
     style.id = 'rk-print-page';
-    style.textContent = `@page { size: ${T.page}; margin: ${template === 'a4-3x8' ? '4mm 0 0 0' : '0'}; }`;
+    style.textContent = `@page { size: ${T.page}; margin: 0; }`;
     document.getElementById('rk-print-page')?.remove();
     document.head.appendChild(style);
+  };
+
+  const print = async () => {
+    const T = TEMPLATES[template];
+    setTestPrint(false);
+    setPageStyle();
+    await new Promise((r) => setTimeout(r, 50));
     window.print();
-    await log(store, { typ: 'Etikett', detaljer: `${chosen.length * copies} etiketter utskrivna (${T.label}): ${chosen.slice(0, 10).map((d) => d.assetId || d.serial).join(', ')}${chosen.length > 10 ? '…' : ''}` });
+    await log(store, { typ: 'Etikett', detaljer: `${chosen.length * copies} etiketter utskrivna (${T.label}${template === 'a4-3x8' ? `, från position ${start}` : ''}): ${chosen.slice(0, 10).map((d) => d.assetId || d.serial).join(', ')}${chosen.length > 10 ? '…' : ''}` });
+  };
+
+  const printTest = async () => {
+    setTestPrint(true);
+    setPageStyle();
+    await new Promise((r) => setTimeout(r, 50));
+    window.print();
+    setTestPrint(false);
   };
 
   const labels = chosen.flatMap((d) => Array.from({ length: copies }, (_, i) => ({ d, key: `${d.id}-${i}` })));
+  // A4: leave the first (start-1) positions empty, then split into sheets of 24.
+  const cells: ({ d: DeviceView; key: string } | null)[] = template === 'a4-3x8' ? [...Array.from({ length: start - 1 }, () => null), ...labels] : labels;
+  const sheets: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += PER_SHEET) sheets.push(cells.slice(i, i + PER_SHEET));
+  const sheetCount = Math.max(1, sheets.length);
   const set = (k: keyof Fields) => (v: boolean) => setFields((f) => ({ ...f, [k]: v }));
 
   return (
@@ -195,6 +235,32 @@ function EtiketterInner() {
             <SegmentedButton label="Mall" value={template} onChange={(v) => setTemplate(v as Template)}
               options={[{ value: '62x29', label: '62×29' }, { value: '54x17', label: '54×17' }, { value: 'a4-3x8', label: 'A4 3×8' }]} />
             <span className="small muted">{TEMPLATES[template].label}</span>
+            {template === 'a4-3x8' && (
+              <div className="stack" style={{ gap: 10 }}>
+                <div>
+                  <div className="field-label">Börja på etikett nr {start} — klicka på första lediga platsen</div>
+                  <div className="sheet-pick" role="grid" aria-label="Välj startposition på arket">
+                    {Array.from({ length: PER_SHEET }, (_, i) => {
+                      const n = i + 1;
+                      const used = n < start;
+                      const filled = !used && n - start < labels.length;
+                      return (
+                        <button key={n} type="button" className={`sheet-cell${used ? ' is-used' : ''}${filled ? ' is-filled' : ''}${n === start ? ' is-start' : ''}`}
+                          title={used ? `Plats ${n}: redan använd` : `Plats ${n}`} onClick={() => setStart(n)}>{n}</button>
+                      );
+                    })}
+                  </div>
+                  <div className="small muted" style={{ marginTop: 6 }}>
+                    Grå = redan använda. {labels.length ? `${labels.length} etiketter → ${sheetCount} ark.` : ''}
+                  </div>
+                </div>
+                <div className="form-grid">
+                  <TextField label="Toppmarginal (mm)" type="number" step="0.5" value={String(marginTop)} onChange={(e) => setMarginTop(Number(e.target.value) || 0)} helper="4,5 mm för 8 × 36 mm på A4" />
+                  <TextField label="Vänstermarginal (mm)" type="number" step="0.5" value={String(marginLeft)} onChange={(e) => setMarginLeft(Number(e.target.value) || 0)} helper="Justera om utskriften hamnar snett" />
+                </div>
+                <Button variant="outlined" size="sm" icon="grid_on" onClick={printTest}>Skriv ut provark (vanligt papper)</Button>
+              </div>
+            )}
             <div className="stack" style={{ gap: 8 }}>
               <Checkbox showLabel label="QR-kod" checked={fields.qr} onChange={set('qr')} />
               <Checkbox showLabel label="Streckkod (Code128)" checked={fields.barcode} onChange={set('barcode')} />
@@ -209,12 +275,24 @@ function EtiketterInner() {
               <b>{copies}</b>
               <IconButton icon="add" label="Fler" disabled={copies >= 5} onClick={() => setCopies(copies + 1)} />
             </div>
-            <TextField label="Tips" readOnly value="Välj rätt pappersstorlek i utskriftsdialogen och marginal: Ingen." />
+            <div className="small muted">I utskriftsdialogen: pappersstorlek {template === 'a4-3x8' ? 'A4' : TEMPLATES[template].page.replace(' ', ' × ')}, marginaler <b>Inga</b>, skala <b>100 %</b> (inte “Anpassa”).</div>
           </section>
         </div>
       )}
       <div className={`print-area print-${template}`} aria-hidden>
-        {labels.map(({ d, key }) => <Label key={key} d={d} t={template} f={fields} />)}
+        {template === 'a4-3x8' ? (
+          (testPrint ? [Array.from({ length: PER_SHEET }, () => null)] : sheets).map((sheet, si) => (
+            <div key={si} className="a4-page" style={{ padding: `${marginTop}mm 0 0 ${marginLeft}mm` }}>
+              {Array.from({ length: PER_SHEET }, (_, i) => {
+                const c = sheet[i];
+                if (testPrint) return <div key={i} className="a4-test">{i + 1}</div>;
+                return c ? <Label key={c.key} d={c.d} t={template} f={fields} /> : <div key={i} />;
+              })}
+            </div>
+          ))
+        ) : (
+          labels.map(({ d, key }) => <Label key={key} d={d} t={template} f={fields} />)
+        )}
       </div>
     </>
   );
