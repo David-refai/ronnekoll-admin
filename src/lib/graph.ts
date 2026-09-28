@@ -108,6 +108,10 @@ export async function updateItem(siteId: string, listId: string, itemId: string,
   });
 }
 
+export async function deleteItem(siteId: string, listId: string, itemId: string) {
+  return call<void>(`/sites/${siteId}/lists/${listId}/items/${itemId}`, { method: 'DELETE' });
+}
+
 export async function me() {
   return call<{ displayName: string; mail: string; userPrincipalName: string }>('/me?$select=displayName,mail,userPrincipalName');
 }

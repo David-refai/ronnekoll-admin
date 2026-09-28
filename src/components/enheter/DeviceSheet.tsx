@@ -18,11 +18,15 @@ export function DeviceSheet({
   onClose,
   onChangeStatus,
   onEdit,
+  onSwap,
+  onDelete,
 }: {
   device: DeviceView;
   onClose(): void;
   onChangeStatus(): void;
   onEdit(): void;
+  onSwap(): void;
+  onDelete(): void;
 }) {
   const store = useStore();
   const router = useRouter();
@@ -67,8 +71,9 @@ export function DeviceSheet({
       subtitle={<div className="row" style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}><StatusBadge status={device.status} size="lg" /><span className="mono muted">{device.serial}</span></div>}
       actions={
         <>
+          <Button variant="danger-text" icon="delete" onClick={onDelete} disabled={store.readOnly}>Ta bort</Button>
           <Button variant="outlined" icon="edit" onClick={onEdit} disabled={store.readOnly}>Redigera</Button>
-          <Button icon="swap_horiz" onClick={onChangeStatus} disabled={store.readOnly}>Ändra status</Button>
+          <Button icon="sync_alt" onClick={onChangeStatus} disabled={store.readOnly}>Ändra status</Button>
         </>
       }
     >
@@ -94,6 +99,9 @@ export function DeviceSheet({
       </div>
 
       <div className="row" style={{ flexWrap: 'wrap', gap: 8, margin: '16px 0' }}>
+        {device.holder?.kind === 'tilldelning' && (
+          <Button variant="tonal" size="sm" icon="swap_horiz" disabled={store.readOnly} onClick={onSwap}>Byt enhet</Button>
+        )}
         <Button variant="tonal" size="sm" icon="report" onClick={() => router.push(`/felanmalningar?enhet=${encodeURIComponent(device.serial)}`)}>Skapa felanmälan</Button>
         <Button variant="tonal" size="sm" icon="print" onClick={() => router.push(`/etiketter?serials=${encodeURIComponent(device.serial)}`)}>Skriv ut etikett</Button>
         {!h && device.status === 'Tillgänglig' && (

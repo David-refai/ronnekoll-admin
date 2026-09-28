@@ -10,7 +10,9 @@ import { PageState, useReady } from '@/components/PageState';
 import { DeviceForm } from '@/components/enheter/DeviceForm';
 import { DeviceSheet } from '@/components/enheter/DeviceSheet';
 import { StatusDialog } from '@/components/enheter/StatusDialog';
-import { changeDeviceStatus, log } from '@/lib/actions';
+import { SwapDialog } from '@/components/enheter/SwapDialog';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
+import { changeDeviceStatus, deleteRow, log } from '@/lib/actions';
 import { buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { daysSince, shortDate } from '@/lib/format';
@@ -49,6 +51,8 @@ function EnheterInner() {
   const [statusFor, setStatusFor] = React.useState<DeviceView | null>(null);
   const [editFor, setEditFor] = React.useState<DeviceView | 'new' | null>(null);
   const [bulk, setBulk] = React.useState<null | 'status' | 'plats' | 'kassera'>(null);
+  const [swapFor, setSwapFor] = React.useState<DeviceView | null>(null);
+  const [deleteFor, setDeleteFor] = React.useState<DeviceView | null>(null);
 
   // Follow URL changes (global scan/search)
   React.useEffect(() => {
@@ -238,8 +242,24 @@ function EnheterInner() {
         </div>
       )}
 
-      {open && !statusFor && !editFor && (
-        <DeviceSheet device={open} onClose={closeSheet} onChangeStatus={() => setStatusFor(open)} onEdit={() => setEditFor(open)} />
+      {open && !statusFor && !editFor && !swapFor && !deleteFor && (
+        <DeviceSheet device={open} onClose={closeSheet} onChangeStatus={() => setStatusFor(open)} onEdit={() => setEditFor(open)}
+          onSwap={() => setSwapFor(open)} onDelete={() => setDeleteFor(open)} />
+      )}
+      {swapFor && <SwapDialog device={devices.find((d) => d.id === swapFor.id) ?? swapFor} devices={devices} onClose={() => setSwapFor(null)} />}
+      {deleteFor && (
+        <ConfirmDelete
+          title={`Ta bort ${deleteFor.assetId || deleteFor.serial}?`}
+          blocked={deleteFor.holder ? `Enheten är ${deleteFor.holder.kind === 'utlaning' ? 'utlånad till' : 'tilldelad'} ${deleteFor.holder.namn}. Återlämna den först.` : null}
+          onClose={() => setDeleteFor(null)}
+          onConfirm={async () => {
+            await deleteRow(store, 'enheter', deleteFor.id, `${deleteFor.assetId || '—'} ${deleteFor.serial} ${deleteFor.modell}`, deleteFor.serial);
+            store.toast({ icon: 'delete', message: `${deleteFor.assetId || deleteFor.serial} borttagen` });
+            closeSheet();
+          }}
+        >
+          <span>Använd bara Ta bort för felregistrerade enheter (t.ex. dubbletter från en import). En enhet som slutat användas ska få status <b>Kasserad</b> så att historiken finns kvar.</span>
+        </ConfirmDelete>
       )}
       {statusFor && <StatusDialog device={devices.find((d) => d.id === statusFor.id) ?? statusFor} devices={devices} onClose={() => setStatusFor(null)} />}
       {editFor && <DeviceForm device={editFor === 'new' ? undefined : editFor} devices={devices} onClose={() => setEditFor(null)} />}

@@ -3,9 +3,10 @@
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Avatar, Badge, Banner, Button, EmptyState, Icon, PageHeader, ScanCounters, ScanFeedback, SearchBar, SegmentedButton, SignaturePad, Switch, TextField,
+  Avatar, Badge, Banner, Button, EmptyState, Icon, PageHeader, ScanCounters, ScanFeedback, SegmentedButton, SignaturePad, Switch, TextField,
 } from '@/ds';
 import { DevicePicker, StudentPicker } from '@/components/Pickers';
+import { ScanInput } from '@/components/Scan';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
 import { assignDevice } from '@/lib/actions';
@@ -180,8 +181,8 @@ function ClassStation() {
                   <Avatar name={sel.namn} size="lg" />
                   <div><div className="small muted">Nästa elev</div><b style={{ fontSize: 20 }}>{sel.namn}</b><div className="small muted">{sel.epost}{sel.skap ? ` · skåp ${sel.skap}` : ''}</div></div>
                 </div>
-                <SearchBar size="lg" scanning autoFocus shortcut={false} placeholder="Skanna enhetens streckkod" value={scan} disabled={busy}
-                  onChange={(e) => setScan(e.target.value)} onSubmit={onScan} />
+                <ScanInput size="lg" scanning autoFocus shortcut={false} placeholder="Skanna enhetens streckkod" value={scan} disabled={busy}
+                  onChange={(e) => setScan(e.target.value)} onScan={onScan} />
               </>
             ) : (
               <EmptyState compact icon="task_alt" tone="green" title={`Alla i ${klass} har en enhet`} description="Välj en annan klass för att fortsätta." />

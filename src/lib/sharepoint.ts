@@ -140,6 +140,12 @@ export async function update(conn: Connection, key: ListKey, id: string, values:
   await graph.updateItem(conn.siteId, meta.id, id, toFields(meta, values, 'update'));
 }
 
+export async function remove(conn: Connection, key: ListKey, id: string) {
+  const meta = conn.lists[key];
+  if (!meta) throw new Error(`Listan ${LISTS[key]} hittades inte på webbplatsen.`);
+  await graph.deleteItem(conn.siteId, meta.id, id);
+}
+
 /** Allowed values of a Choice column, looked up by display name. */
 export function choicesOf(conn: Connection | null, key: ListKey, column: string): string[] | undefined {
   const meta = conn?.lists[key];

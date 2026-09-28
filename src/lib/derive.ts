@@ -35,7 +35,8 @@ const time = (r: Row, ...keys: string[]) => {
   return new Date(r._created).getTime() || 0;
 };
 
-export const serialKey = (s: unknown) => str(s).trim().toUpperCase();
+/** Normalises a serial/AssetID; strips scanner prefixes like "S/N:". */
+export const serialKey = (s: unknown) => str(s).trim().replace(/^S\/?N[:\s]*/i, '').trim().toUpperCase();
 
 export function indexStudents(data: Data) {
   const map = new Map<string, Row>();

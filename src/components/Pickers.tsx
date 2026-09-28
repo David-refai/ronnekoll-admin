@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Avatar, Badge, Icon, SearchBar, StatusBadge } from '@/ds';
+import { ScanInput } from '@/components/Scan';
 import { searchStudents, serialKey, type DeviceView, type StudentView } from '@/lib/derive';
 
 /** Search + pick a student. */
@@ -103,8 +104,8 @@ export function DevicePicker({
   const list = suggestions ? devices.filter(ok).filter((d) => !k || serialKey(d.serial).includes(k) || serialKey(d.assetId).includes(k) || d.modell.toUpperCase().includes(k)).slice(0, 6) : [];
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <SearchBar size="lg" scanning placeholder="Skanna enhet" shortcut={false} value={q} autoFocus={autoFocus}
-        onChange={(e) => { setQ(e.target.value); setError(null); }} onSubmit={submit} />
+      <ScanInput size="lg" scanning placeholder="Skanna enhet" shortcut={false} value={q} autoFocus={autoFocus}
+        onChange={(e) => { setQ(e.target.value); setError(null); }} onScan={submit} />
       {error && <span className="small" style={{ color: 'var(--status-red)', fontWeight: 600 }}>{error}</span>}
       {list.length > 0 && (
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>

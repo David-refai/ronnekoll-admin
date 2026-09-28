@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { Avatar, Badge, Button, DataTable, Dialog, PageHeader, Switch, TextField, type Column } from '@/ds';
 import { PageState, useReady } from '@/components/PageState';
-import { log } from '@/lib/actions';
+import { deleteRow, log } from '@/lib/actions';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
 import { unique } from '@/lib/derive';
 import { str, withId, yes, type TRow } from '@/lib/lists';
 import { useStore } from '@/lib/store';
@@ -51,6 +52,16 @@ function StaffDialog({ row, classes, onClose }: { row: TRow | null; classes: str
   const [kl, setKl] = React.useState<string[]>(initial && initial !== 'ALLA' ? initial.split(/[,;\s]+/).filter(Boolean) : []);
   const [aktiv, setAktiv] = React.useState(row ? row.Aktiv == null || row.Aktiv === '' || yes(row.Aktiv) : true);
   const [busy, setBusy] = React.useState(false);
+  const [del, setDel] = React.useState(false);
+
+  if (del && row) {
+    return (
+      <ConfirmDelete title={`Ta bort ${str(row.Title)}?`} onClose={() => setDel(false)}
+        onConfirm={async () => { await deleteRow(store, 'personal', row._id, `${str(row.Title)} (${str(row.Epost)})`); store.toast({ icon: 'delete', message: `${str(row.Title)} borttagen` }); onClose(); }}>
+        <span>{str(row.Title)} förlorar åtkomsten till lärarappen. Vill du bara pausa åtkomsten — stäng av <b>Aktiv</b> i stället.</span>
+      </ConfirmDelete>
+    );
+  }
 
   const save = async () => {
     setBusy(true);
@@ -69,7 +80,7 @@ function StaffDialog({ row, classes, onClose }: { row: TRow | null; classes: str
 
   return (
     <Dialog open onClose={onClose} icon="badge" title={row ? str(row.Title) : 'Lägg till personal'}
-      actions={<><Button variant="text" onClick={onClose}>Avbryt</Button><Button disabled={!name.trim() || !mail.includes('@') || busy || store.readOnly} onClick={save}>Spara</Button></>}>
+      actions={<>{row && <Button variant="danger-text" icon="delete" disabled={store.readOnly} onClick={() => setDel(true)}>Ta bort</Button>}<Button variant="text" onClick={onClose}>Avbryt</Button><Button disabled={!name.trim() || !mail.includes('@') || busy || store.readOnly} onClick={save}>Spara</Button></>}>
       <div className="form-grid">
         <TextField label="Namn" value={name} onChange={(e) => setName(e.target.value)} />
         <TextField label="E-post" value={mail} onChange={(e) => setMail(e.target.value)} placeholder="fornamn.efternamn@malmo.se" />

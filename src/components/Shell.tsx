@@ -25,6 +25,7 @@ export const ROUTES: Record<string, string> = {
   logg: '/logg',
   personal: '/personal',
   datakvalitet: '/datakvalitet',
+  lasarsbyte: '/lasarsbyte',
   installningar: '/installningar',
 };
 
@@ -83,10 +84,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
     skolarenden: d.skolarenden.filter((f) => isOpenCase(f.Status)).length,
     losenord: d.losenord.filter((p) => str(p.Status) !== 'Klart').length,
   };
-  const groups = NAV.map((g) => ({
-    ...g,
-    items: g.items.map((it) => ({ ...it, count: counts[it.id] || undefined })),
-  }));
+  const groups = NAV.map((g) => {
+    const items = g.items.map((it) => ({ ...it, count: counts[it.id] || undefined }));
+    if (g.label === 'System') items.splice(items.length - 1, 0, { id: 'lasarsbyte', label: 'Läsårsbyte', icon: 'event_repeat', count: undefined });
+    return { ...g, items };
+  });
   const notifications = counts.felanmalningar + counts.skolarenden + counts.losenord;
 
   const onSearch = (raw: string) => {

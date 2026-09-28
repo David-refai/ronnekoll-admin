@@ -170,3 +170,15 @@ export async function createFault(store: Store, v: { EnhetID: string; TypAvFel: 
   await store.create('felanmalningar', { ...v, AssetID: `${v.EnhetID}-${today}`, Title: `${v.EnhetID}-${today}`, Status: 'Ny', AnmäldAv: store.userName });
   await log(store, { typ: 'Felanmälan', enhetId: v.EnhetID, detaljer: `${v.TypAvFel}: ${v.Beskrivning}` });
 }
+
+/* ---------- Delete ---------- */
+
+export async function deleteStudent(store: Store, s: StudentView) {
+  await store.remove('elever', s.id);
+  await log(store, { typ: 'Borttagning', elevId: s.elevId, detaljer: `Elev borttagen: ${s.namn} (${s.klass})` });
+}
+
+export async function deleteRow(store: Store, key: 'personal' | 'enheter', id: string, label: string, enhetId?: string) {
+  await store.remove(key, id);
+  await log(store, { typ: 'Borttagning', enhetId, detaljer: `${key === 'personal' ? 'Personal' : 'Enhet'} borttagen: ${label}` });
+}

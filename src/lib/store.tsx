@@ -32,6 +32,7 @@ interface Store {
   reload(): Promise<void>;
   create(key: ListKey, values: Record<string, unknown>): Promise<Row>;
   update(key: ListKey, id: string, values: Record<string, unknown>): Promise<void>;
+  remove(key: ListKey, id: string): Promise<void>;
   userName: string;
   /** Allowed values for a Choice column (live), else the given fallback. */
   choices(key: ListKey, column: string, fallback: string[]): string[];
@@ -159,6 +160,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [mode],
   );
 
+  const remove = React.useCallback(
+    async (key: ListKey, id: string) => {
+      if (mode === 'live') {
+        if (!connRef.current) throw new Error('Inte ansluten till SharePoint.');
+        await sp.remove(connRef.current, key, id);
+      }
+      setData((d) => ({ ...d, [key]: d[key].filter((r) => r._id !== id) }));
+    },
+    [mode],
+  );
+
   const toast = React.useCallback((t: Omit<Toast, 'id'>) => {
     const id = Date.now() + Math.random();
     setToasts((l) => [...l.slice(-2), { ...t, id }]);
@@ -174,7 +186,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value: Store = {
     data, mode, loading, error, loadedAt, settings, setSettings, token, tokenStatus: status, setToken,
-    connection, readOnly, reload, create, update, userName, choices, toast, toasts, dismissToast,
+    connection, readOnly, reload, create, update, remove, userName, choices, toast, toasts, dismissToast,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

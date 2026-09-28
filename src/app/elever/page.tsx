@@ -8,7 +8,9 @@ import {
 } from '@/ds';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
-import { moveStudents } from '@/lib/actions';
+import { deleteStudent, moveStudents } from '@/lib/actions';
+import { SwapDialog } from '@/components/enheter/SwapDialog';
+import { ConfirmDelete } from '@/components/ConfirmDelete';
 import { buildDevices, buildStudents, maskPersonnr, searchStudents, unique, type StudentView } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { relDate } from '@/lib/format';
@@ -169,6 +171,9 @@ function StudentSheet({ student: s, onClose }: { student: StudentView; onClose()
   const store = useStore();
   const router = useRouter();
   const [reveal, setReveal] = React.useState(false);
+  const [swap, setSwap] = React.useState(false);
+  const [del, setDel] = React.useState(false);
+  const devices = React.useMemo(() => buildDevices(store.data), [store.data]);
   const keys = [s.elevId, s.epost].filter(Boolean).map((k) => k.toLowerCase());
   const mine = (r: Record<string, unknown>) => keys.includes(str(r.ElevID).toLowerCase()) || keys.includes(str(r.ElevEpost).toLowerCase());
 
@@ -189,11 +194,14 @@ function StudentSheet({ student: s, onClose }: { student: StudentView; onClose()
       actions={
         s.device ? (
           <>
+            <Button variant="danger-text" icon="delete" disabled={store.readOnly} onClick={() => setDel(true)}>Ta bort</Button>
+            <Button variant="outlined" icon="swap_horiz" disabled={store.readOnly} onClick={() => setSwap(true)}>Byt enhet</Button>
             <Button variant="outlined" icon="schedule" onClick={() => router.push(`/utlaning?elev=${encodeURIComponent(s.elevId || s.epost)}`)}>Låna ut</Button>
             <Button icon="assignment_return" onClick={() => router.push(`/aterlamning?enhet=${encodeURIComponent(s.device!.serial)}`)}>Återlämna</Button>
           </>
         ) : (
           <>
+            <Button variant="danger-text" icon="delete" disabled={store.readOnly} onClick={() => setDel(true)}>Ta bort</Button>
             <Button variant="outlined" icon="schedule" onClick={() => router.push(`/utlaning?elev=${encodeURIComponent(s.elevId || s.epost)}`)}>Låna ut</Button>
             <Button icon="assignment_ind" onClick={() => router.push(`/tilldelning?elev=${encodeURIComponent(s.elevId || s.epost)}`)}>Tilldela enhet</Button>
           </>
@@ -229,6 +237,21 @@ function StudentSheet({ student: s, onClose }: { student: StudentView; onClose()
       </dl>
       <h3 className="section-title" style={{ fontSize: 16, margin: '24px 0 12px' }}>Historik</h3>
       {events.length ? <Timeline events={events} /> : <p className="small muted">Ingen historik.</p>}
+      {swap && s.device && <SwapDialog device={s.device} devices={devices} onClose={() => setSwap(false)} />}
+      {del && (
+        <ConfirmDelete
+          title={`Ta bort ${s.namn}?`}
+          blocked={s.device ? `${s.namn} har ${s.device.assetId || s.device.serial}. Återlämna enheten först.` : s.loans.length ? `${s.namn} har ett aktivt lån. Återlämna det först.` : null}
+          onClose={() => setDel(false)}
+          onConfirm={async () => {
+            await deleteStudent(store, s);
+            store.toast({ icon: 'delete', message: `${s.namn} borttagen` });
+            onClose();
+          }}
+        >
+          <span>{s.namn} ({s.klass}, {s.epost || s.elevId}) tas bort från Elever. Historiken i Tilldelningar, Återlämningar och Aktivitetslogg finns kvar.</span>
+        </ConfirmDelete>
+      )}
     </SideSheet>
   );
 }
