@@ -467,6 +467,7 @@ import * as React from 'react';
   function SignaturePad(p) {
     var ref = React.useRef(null);
     var st = React.useState(!!p.signed); var has = st[0], setHas = st[1];
+    var cb = React.useRef(null); cb.current = p.onSign;
     React.useEffect(function () {
       var cv = ref.current; if (!cv) return;
       var ctx = cv.getContext('2d'); var dpr = window.devicePixelRatio || 1;
@@ -482,7 +483,8 @@ import * as React from 'react';
       function pos(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
       function d(e) { down = true; var q = pos(e); ctx.beginPath(); ctx.moveTo(q[0], q[1]); cv.setPointerCapture(e.pointerId); }
       function m(e) { if (!down) return; var q = pos(e); ctx.lineTo(q[0], q[1]); ctx.stroke(); setHas(true); }
-      function u() { down = false; }
+      function u2() { if (down && cb.current) cb.current(cv); }
+      function u() { u2(); down = false; }
       cv.addEventListener('pointerdown', d); cv.addEventListener('pointermove', m); cv.addEventListener('pointerup', u);
       return function () { cv.removeEventListener('pointerdown', d); cv.removeEventListener('pointermove', m); cv.removeEventListener('pointerup', u); };
     }, [p.signed]);

@@ -44,6 +44,13 @@ export interface SpColumn {
   displayName: string;
   readOnly?: boolean;
   hidden?: boolean;
+  boolean?: object;
+  number?: object;
+  dateTime?: object;
+  choice?: { choices?: string[] };
+  personOrGroup?: object;
+  lookup?: object;
+  calculated?: object;
 }
 
 export interface SpList {
@@ -71,7 +78,7 @@ export async function getLists(siteId: string) {
 
 export async function getColumns(siteId: string, listId: string) {
   const r = await call<{ value: SpColumn[] }>(
-    `/sites/${siteId}/lists/${listId}/columns?$select=name,displayName,readOnly,hidden`,
+    `/sites/${siteId}/lists/${listId}/columns`,
   );
   return r.value;
 }

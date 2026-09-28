@@ -37,11 +37,18 @@ a { color: var(--primary); }
 .menu { position: absolute; z-index: 30; margin-top: 6px; min-width: 220px; max-height: 320px; overflow: auto; background: var(--surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-overlay); padding: 6px; }
 .menu button { display: flex; width: 100%; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 14px; border-radius: 8px; cursor: pointer; text-align: left; }
 .menu button:hover, .menu button.is-on { background: var(--surface-container); }
+.picker-row { display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: none; color: var(--ink); font: inherit; border-radius: 10px; cursor: pointer; }
+.picker-row:hover { background: var(--surface-container); }
+.two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.step-title { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+.step-num { width: 28px; height: 28px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary-container); color: var(--on-primary-container); font-size: 14px; font-weight: 800; }
+.check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.secret { font-family: var(--font-mono); letter-spacing: 0.08em; }
 .chip-wrap { position: relative; display: inline-block; }
 
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .grid-7-5, .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .grid-7-5, .grid-2, .two-col { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1024px) {
   .app-demo { padding: 0 16px; }
@@ -51,6 +58,6 @@ a { color: var(--primary); }
   .app-menu-btn { display: inline-flex; }
   .app-demo .rk-badge { white-space: normal; height: auto; padding: 4px 10px; }
   .grid-4 { gap: 12px; }
-  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .form-grid, .check-grid { grid-template-columns: minmax(0, 1fr); }
   .kv { grid-template-columns: 120px minmax(0, 1fr); }
 }

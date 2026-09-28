@@ -33,6 +33,8 @@ interface Store {
   create(key: ListKey, values: Record<string, unknown>): Promise<Row>;
   update(key: ListKey, id: string, values: Record<string, unknown>): Promise<void>;
   userName: string;
+  /** Allowed values for a Choice column (live), else the given fallback. */
+  choices(key: ListKey, column: string, fallback: string[]): string[];
   toast(t: Omit<Toast, 'id'>): void;
   toasts: Toast[];
   dismissToast(id: number): void;
@@ -165,10 +167,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const dismissToast = React.useCallback((id: number) => setToasts((l) => l.filter((x) => x.id !== id)), []);
 
   const userName = token?.name || settings.userName || 'David';
+  const choices = React.useCallback(
+    (key: ListKey, column: string, fallback: string[]) => sp.choicesOf(connection, key, column) ?? fallback,
+    [connection],
+  );
 
   const value: Store = {
     data, mode, loading, error, loadedAt, settings, setSettings, token, tokenStatus: status, setToken,
-    connection, readOnly, reload, create, update, userName, toast, toasts, dismissToast,
+    connection, readOnly, reload, create, update, userName, choices, toast, toasts, dismissToast,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

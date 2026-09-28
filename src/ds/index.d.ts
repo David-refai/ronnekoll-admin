@@ -110,7 +110,7 @@ export interface ScanFeedbackProps { state?: 'idle' | 'success' | 'warning' | 'e
 export declare function ScanFeedback(props: ScanFeedbackProps): React.ReactElement;
 export declare function ScanCounters(props: { items: { label: string; value: number; total?: number; tone?: 'gray' | 'green' | 'red' | 'amber'; icon?: string }[] }): React.ReactElement;
 
-export declare function SignaturePad(props: { label?: string; signer?: string; date?: string; signed?: boolean; onClear?(): void }): React.ReactElement;
+export declare function SignaturePad(props: { label?: string; signer?: string; date?: string; signed?: boolean; onClear?(): void; onSign?(canvas: HTMLCanvasElement): void }): React.ReactElement;
 export declare function PdfPreview(props: { fileName?: string; page?: number; pages?: number; children?: React.ReactNode }): React.ReactElement;
 export interface LabelFields { qr?: boolean; barcode?: boolean; assetId?: boolean; modell?: boolean; skola?: boolean; elev?: boolean }
 export declare function LabelPreview(props: { device: Pick<Device, 'serienummer' | 'assetId' | 'modell' | 'elev' | 'klass'>; template?: '62x29' | '54x17' | 'a4-3x8'; fields?: LabelFields }): React.ReactElement;

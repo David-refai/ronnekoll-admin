@@ -148,3 +148,57 @@ export function overview(data: Data, devices: DeviceView[]) {
 export function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'sv'));
 }
+
+export interface StudentView {
+  id: string;
+  row: Row;
+  namn: string;
+  elevId: string;
+  epost: string;
+  klass: string;
+  personnr: string;
+  tagg: string;
+  skap: string;
+  device?: DeviceView;
+  loans: Row[];
+}
+
+export function buildStudents(data: Data, devices: DeviceView[]): StudentView[] {
+  const byStudent = new Map<string, DeviceView>();
+  for (const d of devices) {
+    if (d.holder?.kind !== 'tilldelning') continue;
+    const r = d.holder.row;
+    for (const k of [d.holder.elevId, str(r.ElevID)]) if (k) byStudent.set(k.toLowerCase(), d);
+  }
+  const loans = data.utlaningar.filter((l) => str(l.Status) === 'Aktiv');
+  return data.elever.map((s) => {
+    const keys = [str(s.ElevID), str(s.Epost)].filter(Boolean).map((k) => k.toLowerCase());
+    const device = keys.map((k) => byStudent.get(k)).find(Boolean);
+    return {
+      id: s._id,
+      row: s,
+      namn: str(s.Title) || `${str(s.Fornamn)} ${str(s.Efternamn)}`.trim(),
+      elevId: str(s.ElevID),
+      epost: str(s.Epost),
+      klass: str(s.Klass),
+      personnr: str(s.Personnr),
+      tagg: str(s.Tagg),
+      skap: str(s['Skåpnummer']),
+      device,
+      loans: loans.filter((l) => keys.includes(str(l.ElevID).toLowerCase())),
+    };
+  });
+}
+
+export function maskPersonnr(p: string) {
+  if (!p) return '—';
+  const digits = p.replace(/\D/g, '');
+  const head = digits.length >= 10 ? digits.slice(digits.length - 10, digits.length - 4) : digits.slice(0, 6);
+  return `${head}-••••`;
+}
+
+export function searchStudents(list: StudentView[], q: string) {
+  const n = q.trim().toLowerCase();
+  if (!n) return list;
+  return list.filter((s) => [s.namn, s.elevId, s.epost, s.klass].join(' ').toLowerCase().includes(n));
+}

@@ -32,6 +32,10 @@ export interface Row {
 
 export type Data = Record<ListKey, Row[]>;
 
+/** A Row with the `id` DataTable needs. */
+export type TRow = Row & { id: string };
+export const withId = (rows: Row[]): TRow[] => rows.map((r) => ({ ...r, id: r._id }));
+
 export const EMPTY_DATA: Data = {
   enheter: [],
   elever: [],

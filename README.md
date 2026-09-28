@@ -43,6 +43,6 @@ Ingen inloggning: token sparas bara i minnet och i flikens `sessionStorage` och 
 
 | Klart | Nästa |
 |---|---|
-| Översikt, Enheter (tabell/kort, filter, sortering, export, detaljer, statusbyte med Byt enhet/Återlämna, massåtgärder, ny/redigera), Inställningar (token, webbplats, listkontroll), mobilmeny, ljust/mörkt tema | Tilldelning + Klassutdelning, Återlämning, Tillfällig utlåning, Elever, Importera, Inventering, Etiketter, Felanmälningar, Skolärenden, Lösenordsbegäran, Rapporter, Aktivitetslogg, Analys, Datakvalitet, Personal, Läsårsbyte |
+| Översikt, Enheter, Elever, Tilldelning + Klassutdelning, Återlämning, Tillfällig utlåning, Felanmälningar, Skolärenden, Lösenordsbegäran, Aktivitetslogg, Personal, Inställningar | Importera, Inventering, Etiketter, Rapporter, Analys, Datakvalitet, Läsårsbyte |
 
 © David Refai
