@@ -14,11 +14,15 @@ export function CameraScanner({ onResult, onClose }: { onResult(text: string): v
   React.useEffect(() => {
     let stop: (() => void) | undefined;
     let cancelled = false;
-    (async () => {
+    // Start on the next tick: React dev mode mounts effects twice, and a first
+    // reader that is stopped late would also stop the second one's video.
+    const timer = window.setTimeout(async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('Kameran är inte tillgänglig i den här webbläsaren (kräver https eller localhost).');
         const { BrowserMultiFormatReader } = await import('@zxing/browser');
         const reader = new BrowserMultiFormatReader();
+        for (let i = 0; i < 20 && !video.current; i++) await new Promise((r) => setTimeout(r, 25));
+        if (!video.current || cancelled) return;
         const controls = await reader.decodeFromConstraints(
           { video: { facingMode: { ideal: 'environment' } } },
           video.current!,
@@ -35,11 +39,12 @@ export function CameraScanner({ onResult, onClose }: { onResult(text: string): v
         if (cancelled) controls.stop();
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        setError(/Permission|NotAllowed/i.test(msg) ? 'Du nekade kameran. Tillåt kamera för sidan i webbläsarens inställningar.' : msg);
+        setError(/Permission|NotAllowed/i.test(msg) ? 'Du nekade kameran. Tillåt kamera för sidan i webbläsarens inställningar.' : /NotReadable|in use/i.test(msg) ? 'Kameran används av ett annat program. Stäng det och försök igen.' : msg);
       }
-    })();
+    }, 0);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
       stop?.();
     };
   }, []);

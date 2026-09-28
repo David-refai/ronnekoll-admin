@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
-import { Badge, Button, Checkbox, Chip, EmptyState, IconButton, PageHeader, SegmentedButton, TextField } from '@/ds';
+import { Badge, Button, Checkbox, Chip, DataTable, EmptyState, IconButton, PageHeader, SegmentedButton, TextField, type Column } from '@/ds';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
 import { ScanInput } from '@/components/Scan';
@@ -12,6 +12,7 @@ import { log } from '@/lib/actions';
 import { buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
 import { useStore } from '@/lib/store';
 
+type LRow = DeviceView & { id: string };
 type Template = '62x29' | '54x17' | 'a4-3x8';
 const TEMPLATES: Record<Template, { label: string; w: number; h: number; page: string }> = {
   '62x29': { label: 'Etikettskrivare 62 × 29 mm', w: 62, h: 29, page: '62mm 29mm' },
@@ -77,6 +78,26 @@ function EtiketterInner() {
   const [scan, setScan] = React.useState('');
   const [klass, setKlass] = React.useState<string | null>(null);
   const [modell, setModell] = React.useState<string | null>(null);
+  const [noAsset, setNoAsset] = React.useState(false);
+  const classes = React.useMemo(() => unique(devices.map((d) => d.klass)).filter((k) => !/^avgått/i.test(k)), [devices]);
+  const needle = scan.trim().toLowerCase();
+  const visible: LRow[] = React.useMemo(
+    () =>
+      devices
+        .filter((d) => d.status !== 'Kasserad')
+        .filter((d) => (!klass || d.klass === klass) && (!modell || d.modell === modell) && (!noAsset || !d.assetId))
+        .filter((d) => !needle || [d.assetId, d.serial, d.modell, d.holder?.namn, d.klass].join(' ').toLowerCase().includes(needle))
+        .sort((a, b) => `${a.klass} ${a.assetId}`.localeCompare(`${b.klass} ${b.assetId}`, 'sv', { numeric: true }))
+        .map((d) => ({ ...d, id: serialKey(d.serial) })),
+    [devices, klass, modell, noAsset, needle],
+  );
+  const pickCols: Column<LRow>[] = [
+    { key: 'assetId', label: 'AssetID', mono: true, render: (d) => d.assetId || <Badge tone="amber">Saknas</Badge> },
+    { key: 'serial', label: 'Serienummer', mono: true },
+    { key: 'klass', label: 'Klass', render: (d) => d.klass || '—' },
+    { key: 'elev', label: 'Elev', render: (d) => d.holder?.namn ?? '—' },
+    { key: 'modell', label: 'Modell' },
+  ];
 
   React.useEffect(() => {
     const s = params.get('serials');
@@ -85,12 +106,17 @@ function EtiketterInner() {
 
   const chosen = selected.map((k) => devices.find((d) => serialKey(d.serial) === k)).filter((d): d is DeviceView => !!d);
   const add = (list: DeviceView[]) => setSelected((s) => Array.from(new Set([...s, ...list.map((d) => serialKey(d.serial))])));
+  /** Enter/scan: an exact serial or AssetID is added directly; otherwise all matches are added. */
   const onScan = (raw: string) => {
-    setScan('');
     const k = serialKey(raw);
     const d = devices.find((x) => serialKey(x.serial) === k || (x.assetId && serialKey(x.assetId) === k));
-    if (d) add([d]);
-    else store.toast({ icon: 'error', message: `Hittar ingen enhet ${raw}` });
+    if (d) {
+      add([d]);
+      setScan('');
+    } else if (visible.length) {
+      add(visible);
+      store.toast({ icon: 'add', message: `${visible.length} enheter lades till` });
+    } else store.toast({ icon: 'error', message: `Hittar ingen enhet som matchar ${raw}` });
   };
 
   const print = async () => {
@@ -118,20 +144,41 @@ function EtiketterInner() {
           <div className="stack" style={{ gap: 20 }}>
             <section className="rk-card stack">
               <h2 className="section-title" style={{ fontSize: 16 }}>Välj enheter</h2>
-              <ScanInput shortcut={false} placeholder="Skanna eller skriv serienummer / AssetID" value={scan} onChange={(e) => setScan(e.target.value)} onScan={onScan} />
-              <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-                <FilterMenu label="Klass" value={klass} onChange={setKlass} options={unique(devices.map((d) => d.klass)).map((v) => ({ value: v }))} />
-                <FilterMenu label="Modell" value={modell} onChange={setModell} options={unique(devices.map((d) => d.modell)).map((v) => ({ value: v }))} />
-                <Button variant="tonal" size="sm" icon="add" disabled={!klass && !modell}
-                  onClick={() => add(devices.filter((d) => (!klass || d.klass === klass) && (!modell || d.modell === modell) && d.status !== 'Kasserad'))}>Lägg till alla som matchar</Button>
-                <Chip label="Utan AssetID" count={devices.filter((d) => !d.assetId).length} onClick={() => add(devices.filter((d) => !d.assetId))} />
-              </div>
-              {chosen.length ? (
+              <div>
+                <div className="field-label">Hela klassen</div>
                 <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-                  {chosen.map((d) => <Chip key={d.id} variant="input" label={d.assetId || d.serial} onRemove={() => setSelected((s) => s.filter((x) => x !== serialKey(d.serial)))} />)}
-                  <Button variant="text" size="sm" onClick={() => setSelected([])}>Rensa</Button>
+                  {classes.map((k) => {
+                    const inClass = devices.filter((d) => d.klass === k && d.status !== 'Kasserad');
+                    const all = inClass.length > 0 && inClass.every((d) => selected.includes(serialKey(d.serial)));
+                    return (
+                      <Chip key={k} label={k} count={inClass.length} selected={all}
+                        onClick={() => (all ? setSelected((s) => s.filter((x) => !inClass.some((d) => serialKey(d.serial) === x))) : add(inClass))} />
+                    );
+                  })}
                 </div>
-              ) : <span className="small muted">Inga enheter valda.</span>}
+              </div>
+              <ScanInput shortcut={false} placeholder="Sök AssetID, serienummer, elev eller modell — eller skanna" value={scan}
+                onChange={(e) => setScan(e.target.value)} onScan={onScan} />
+              <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <FilterMenu label="Klass" value={klass} onChange={setKlass} options={classes.map((v) => ({ value: v }))} />
+                <FilterMenu label="Modell" value={modell} onChange={setModell} options={unique(devices.map((d) => d.modell)).map((v) => ({ value: v }))} />
+                <Chip label="Utan AssetID" selected={noAsset} count={devices.filter((d) => !d.assetId).length} onClick={() => setNoAsset(!noAsset)} />
+                <span className="small muted" style={{ marginLeft: 'auto' }}>{visible.length} visas · <b>{chosen.length} valda</b></span>
+                {chosen.length > 0 && <Button variant="text" size="sm" onClick={() => setSelected([])}>Rensa val</Button>}
+              </div>
+              <DataTable<LRow>
+                columns={pickCols}
+                rows={visible}
+                density="compact"
+                selectable
+                maxHeight={420}
+                selected={visible.filter((d) => selected.includes(d.id)).map((d) => d.id)}
+                onSelectionChange={(ids) => {
+                  const shown = new Set(visible.map((d) => d.id));
+                  setSelected((s) => [...s.filter((x) => !shown.has(x)), ...(ids as string[])]);
+                }}
+                onRowClick={(d) => setSelected((s) => (s.includes(d.id) ? s.filter((x) => x !== d.id) : [...s, d.id]))}
+              />
             </section>
             <section className="rk-card">
               <h2 className="section-title" style={{ fontSize: 16, marginBottom: 12 }}>Förhandsvisning</h2>
@@ -140,7 +187,7 @@ function EtiketterInner() {
                   {labels.slice(0, 12).map(({ d, key }) => <Label key={key} d={d} t={template} f={fields} />)}
                   {labels.length > 12 && <Badge>+{labels.length - 12} till</Badge>}
                 </div>
-              ) : <EmptyState compact icon="label" title="Välj enheter" description="Skanna, sök eller lägg till en hel klass." />}
+              ) : <EmptyState compact icon="label" title="Välj enheter" description="Klicka på en klass, bocka i rader eller skanna." />}
             </section>
           </div>
           <section className="rk-card stack" style={{ gap: 16 }}>
