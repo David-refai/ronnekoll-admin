@@ -6,19 +6,19 @@ import { LISTS, type ListKey } from '@/lib/lists';
 import { useStore } from '@/lib/store';
 import { shortDate } from '@/lib/format';
 import * as graph from '@/lib/graph';
+import { parseSharePoint } from '@/lib/settings';
 
 export default function Installningar() {
   const store = useStore();
   const [raw, setRaw] = React.useState('');
-  const [host, setHost] = React.useState(store.settings.hostname);
-  const [path, setPath] = React.useState(store.settings.sitePath);
+  const siteUrl = (h: string, p: string) => (h ? `https://${h}${p === '/' ? '' : p}` : '');
+  const [address, setAddress] = React.useState(siteUrl(store.settings.hostname, store.settings.sitePath));
   const [name, setName] = React.useState(store.settings.userName);
   const [test, setTest] = React.useState<{ ok: boolean; msg: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
-    setHost(store.settings.hostname);
-    setPath(store.settings.sitePath);
+    setAddress(siteUrl(store.settings.hostname, store.settings.sitePath));
     setName(store.settings.userName);
   }, [store.settings]);
 
@@ -30,14 +30,15 @@ export default function Installningar() {
     store.setToken(raw);
     setRaw('');
     setTest(null);
+    if (!store.settings.demo) window.setTimeout(() => store.reload(), 0);
   };
 
+  const parsed = parseSharePoint(address);
+
   const saveSite = () => {
-    // Accept a full SharePoint URL too: https://tenant.sharepoint.com/sites/Name/...
-    let h = host.trim(), p = path.trim();
-    const m = h.match(/^https?:\/\/([^/]+)(\/sites\/[^/?#]+)/i);
-    if (m) { h = m[1]; p = m[2]; }
-    store.setSettings({ ...store.settings, hostname: h.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), sitePath: p, userName: name.trim() || 'David' });
+    if (!parsed) return;
+    // Saving a real address switches Demoläge off.
+    store.setSettings({ ...store.settings, ...parsed, demo: false, userName: name.trim() || 'David' });
   };
 
   const testConnection = async () => {
@@ -46,8 +47,9 @@ export default function Installningar() {
     try {
       const who = await graph.me();
       let msg = `Inloggad som ${who.displayName}.`;
-      if (store.settings.hostname && store.settings.sitePath) {
-        const site = await graph.getSite(store.settings.hostname, store.settings.sitePath);
+      const target = parsed ?? (store.settings.hostname ? { hostname: store.settings.hostname, sitePath: store.settings.sitePath } : null);
+      if (target) {
+        const site = await graph.getSite(target.hostname, target.sitePath);
         msg += ` Webbplats: ${site.displayName}.`;
       }
       setTest({ ok: true, msg });
@@ -101,12 +103,14 @@ export default function Installningar() {
           label={<span><b>Demoläge</b> — använd exempeldata i stället för SharePoint. Inget sparas.</span>}
         />
         <div className="form-grid">
-          <TextField label="SharePoint-värd" value={host} onChange={(e) => setHost(e.target.value)} placeholder="malmostad.sharepoint.com" helper="Du kan också klistra in hela webbplatsens adress här" />
-          <TextField label="Webbplatsens sökväg" value={path} onChange={(e) => setPath(e.target.value)} placeholder="/sites/Ronnenskolan-IT" />
+          <TextField className="full" label="SharePoint-adress" value={address} onChange={(e) => setAddress(e.target.value)}
+            placeholder="https://cityofmalmo.sharepoint.com/sites/GRFRnnenskolan"
+            error={address.trim() && !parsed ? 'Det här ser inte ut som en SharePoint-adress' : undefined}
+            helper={parsed ? `Webbplats: ${parsed.hostname}${parsed.sitePath === '/' ? '' : parsed.sitePath} — klistra gärna in en länk till valfri lista, appen hittar själv alla listor` : 'Klistra in länken till webbplatsen eller till någon av listorna'} />
           <TextField label="Ditt namn i Aktivitetslogg" value={name} onChange={(e) => setName(e.target.value)} helper="Används om token saknar namn" />
         </div>
         <div className="row">
-          <Button icon="save" onClick={saveSite}>Spara</Button>
+          <Button icon="save" onClick={saveSite} disabled={!parsed}>Spara och anslut</Button>
           <Button variant="outlined" icon="refresh" onClick={() => store.reload()} disabled={store.loading}>Hämta data igen</Button>
           {store.loadedAt && <span className="small muted">Senast hämtat {store.loadedAt.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>}
         </div>

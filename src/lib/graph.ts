@@ -61,7 +61,7 @@ export interface SpItem {
 
 export async function getSite(hostname: string, sitePath: string) {
   const path = sitePath.startsWith('/') ? sitePath : '/' + sitePath;
-  return call<{ id: string; displayName: string; webUrl: string }>(`/sites/${hostname}:${path}`);
+  return call<{ id: string; displayName: string; webUrl: string }>(path === '/' ? `/sites/${hostname}` : `/sites/${hostname}:${path}`);
 }
 
 export async function getLists(siteId: string) {

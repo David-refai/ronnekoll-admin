@@ -40,3 +40,13 @@ export function saveSettings(s: Settings) {
     /* ignore */
   }
 }
+
+/** Accepts any SharePoint link (site, list or item) and returns host + site path. */
+export function parseSharePoint(input: string): { hostname: string; sitePath: string } | null {
+  const v = input.trim();
+  if (!v) return null;
+  const m = v.match(/^(?:https?:\/\/)?([^/\s]+\.sharepoint\.com)((?:\/(?:sites|teams)\/[^/?#\s]+)?)/i);
+  if (!m) return null;
+  return { hostname: m[1].toLowerCase(), sitePath: m[2] || '/' };
+}
+
