@@ -30,6 +30,8 @@ interface Store {
   /** True when writes are blocked (token expired in live mode). */
   readOnly: boolean;
   reload(): Promise<void>;
+  /** Forget the cached list/column map so the next reload re-reads it (e.g. after creating lists). */
+  resetConnection(): void;
   create(key: ListKey, values: Record<string, unknown>): Promise<Row>;
   update(key: ListKey, id: string, values: Record<string, unknown>): Promise<void>;
   remove(key: ListKey, id: string): Promise<void>;
@@ -122,6 +124,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSettingsState(s);
   }, []);
 
+  const resetConnection = React.useCallback(() => {
+    connRef.current = null;
+  }, []);
+
   const setToken = React.useCallback((t: string | null) => {
     storeToken(t);
     connRef.current = null;
@@ -186,7 +192,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value: Store = {
     data, mode, loading, error, loadedAt, settings, setSettings, token, tokenStatus: status, setToken,
-    connection, readOnly, reload, create, update, remove, userName, choices, toast, toasts, dismissToast,
+    connection, readOnly, reload, resetConnection, create, update, remove, userName, choices, toast, toasts, dismissToast,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

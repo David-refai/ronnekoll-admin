@@ -128,6 +128,8 @@ import * as React from 'react';
     // Lösenord / lån
     'Behandlas': ['violet', 'pending'], 'Klart': ['green', 'check_circle'],
     'Aktiv': ['violet', 'schedule'], 'Återlämnad': ['green', 'assignment_return'], 'Försenad': ['red', 'alarm'],
+    // Brandsläckare
+    'OK': ['green', 'check_circle'], 'Går ut snart': ['amber', 'schedule'], 'Utgången': ['red', 'event_busy'], 'Fel anmält': ['orange', 'report'], 'Byte beställt': ['violet', 'local_shipping'],
     // Prioritet
     'Låg': ['gray', 'keyboard_double_arrow_down'], 'Normal': ['blue', 'drag_handle'], 'Hög': ['amber', 'keyboard_double_arrow_up'], 'Akut': ['red', 'priority_high'],
     // Signatur
@@ -166,7 +168,7 @@ import * as React from 'react';
     { label: 'Översikt', items: [{ id: 'oversikt', label: 'Översikt', icon: 'space_dashboard' }, { id: 'analys', label: 'Analys', icon: 'monitoring' }] },
     { label: 'Enheter', items: [{ id: 'enheter', label: 'Enheter', icon: 'laptop_chromebook' }, { id: 'importera', label: 'Importera', icon: 'upload_file' }, { id: 'inventering', label: 'Inventering', icon: 'inventory' }, { id: 'etiketter', label: 'Etiketter', icon: 'label' }] },
     { label: 'Elever & utdelning', items: [{ id: 'elever', label: 'Elever', icon: 'school' }, { id: 'tilldelning', label: 'Tilldelning', icon: 'assignment_ind' }, { id: 'aterlamning', label: 'Återlämning', icon: 'assignment_return' }, { id: 'utlaning', label: 'Tillfällig utlåning', icon: 'schedule' }] },
-    { label: 'Ärenden', items: [{ id: 'felanmalningar', label: 'Felanmälningar', icon: 'report', count: 7 }, { id: 'skolarenden', label: 'Skolärenden', icon: 'handyman', count: 3 }, { id: 'losenord', label: 'Lösenordsbegäran', icon: 'password', count: 2 }] },
+    { label: 'Ärenden', items: [{ id: 'felanmalningar', label: 'Felanmälningar', icon: 'report', count: 7 }, { id: 'skolarenden', label: 'Skolärenden', icon: 'handyman', count: 3 }, { id: 'losenord', label: 'Lösenordsbegäran', icon: 'password', count: 2 }, { id: 'brandslackare', label: 'Brandsläckare', icon: 'fire_extinguisher', count: 3 }] },
     { label: 'Rapporter', items: [{ id: 'rapporter', label: 'Rapporter', icon: 'summarize' }, { id: 'logg', label: 'Aktivitetslogg', icon: 'history' }] },
     { label: 'System', items: [{ id: 'personal', label: 'Personal & behörigheter', icon: 'badge' }, { id: 'datakvalitet', label: 'Datakvalitet', icon: 'rule' }, { id: 'installningar', label: 'Inställningar', icon: 'settings' }] }
   ];

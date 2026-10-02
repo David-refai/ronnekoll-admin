@@ -8,6 +8,7 @@ type Tone = 'green' | 'blue' | 'violet' | 'amber' | 'orange' | 'red' | 'gray' | 
 import { PageState, useReady } from '@/components/PageState';
 import { useStore } from '@/lib/store';
 import { buildDevices, overview, unique } from '@/lib/derive';
+import { buildExtinguishers, leftText, monthName } from '@/lib/brand';
 import { relDate } from '@/lib/format';
 import { str } from '@/lib/lists';
 
@@ -104,6 +105,9 @@ export default function Oversikt() {
   }, [devices]);
 
   const go = (href: string) => () => router.push(href);
+  const exts = React.useMemo(() => buildExtinguishers(store.data), [store.data]);
+  const extUrgent = exts.filter((e) => e.status === 'Utgången' || e.status === 'Går ut snart' || e.status === 'Fel anmält');
+  const extUnchecked = new Date().getDate() >= 1 ? exts.filter((e) => !e.checkedThisMonth).length : 0;
 
   if (!ready) {
     return (
@@ -165,13 +169,20 @@ export default function Oversikt() {
               description={`Begärda av ${unique(o.pwWaiting.map((p) => str(p.BegardAv))).slice(0, 2).join(' och ') || '—'}`}
               onClick={go('/losenord')} />
           )}
+          {extUrgent.length > 0 && (
+            <AttentionCard count={extUrgent.length} tone={extUrgent.some((e) => e.status === 'Utgången') ? 'red' : 'amber'} title="Brandsläckare behöver åtgärd"
+              description={extUrgent.slice(0, 2).map((e) => `${e.nr} ${e.status === 'Fel anmält' ? 'fel anmält' : leftText(e)}`).join(' · ')} onClick={go('/brandslackare')} />
+          )}
+          {exts.length > 0 && extUnchecked > 0 && (
+            <AttentionCard count={extUnchecked} tone="blue" title={`Brandkontroll för ${monthName()} inte klar`} description={`${exts.length - extUnchecked} av ${exts.length} kontrollerade`} onClick={go('/brandkontroll')} />
+          )}
           {o.studentsWithout.length > 0 && (
             <AttentionCard count={o.studentsWithout.length} tone="blue" title="Elever utan enhet" onClick={go('/elever?utan=1')} />
           )}
           {o.mismatch.length > 0 && (
             <AttentionCard count={o.mismatch.length} tone="blue" title="Status och tilldelning stämmer inte" description="Se Datakvalitet" onClick={go('/datakvalitet')} />
           )}
-          {o.overdue.length + o.saknas + o.oldFaults.length + o.pwWaiting.length + o.studentsWithout.length + o.mismatch.length === 0 && (
+          {o.overdue.length + o.saknas + o.oldFaults.length + o.pwWaiting.length + o.studentsWithout.length + o.mismatch.length + extUrgent.length + extUnchecked === 0 && (
             <div className="rk-card small muted">Inget att åtgärda just nu.</div>
           )}
         </section>

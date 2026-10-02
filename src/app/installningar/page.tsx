@@ -7,6 +7,8 @@ import { useStore } from '@/lib/store';
 import { shortDate } from '@/lib/format';
 import * as graph from '@/lib/graph';
 import { parseSharePoint } from '@/lib/settings';
+import { TokenButtons } from '@/components/TokenHelp';
+import { ProvisionLists } from '@/components/ProvisionLists';
 
 export default function Installningar() {
   const store = useStore();
@@ -72,9 +74,11 @@ export default function Installningar() {
           {store.mode === 'live' && t && <TokenStatus state={ts.state === 'none' ? 'expired' : ts.state} minutes={ts.minutes} />}
         </div>
         <p className="small muted" style={{ margin: 0 }}>
-          Klistra in en Microsoft Graph-token med behörigheten <span className="mono">Sites.ReadWrite.All</span> (t.ex. från Graph Explorer).
+          1. Öppna Graph Explorer och logga in med ditt malmo.se-konto. 2. Under <b>Modify permissions</b>: <span className="mono">Sites.ReadWrite.All</span> (och <span className="mono">Sites.Manage.All</span> för att kunna skapa listor).
+          3. Fliken <b>Access token</b> → kopiera. 4. Tryck <b>Klistra in token från urklipp</b>.
           Token sparas bara i minnet och i den här fliken (sessionStorage) — den försvinner när du stänger fliken.
         </p>
+        <TokenButtons onSaved={() => setTest(null)} />
         <TextField label="Access token" mono multiline rows={4} placeholder="eyJ0eXAiOiJKV1Qi…" value={raw}
           onChange={(e) => setRaw(e.target.value)} />
         <div className="row" style={{ flexWrap: 'wrap' }}>
@@ -124,6 +128,7 @@ export default function Installningar() {
             {conn && <Badge tone="primary" icon="cloud_done">{conn.siteName}</Badge>}
           </div>
           <p className="small muted" style={{ margin: 0 }}>Appen hittar listorna på namn och kolumnerna på visningsnamn, så interna namn som field_2 spelar ingen roll.</p>
+          <ProvisionLists keys={['brandslackare', 'brandkontroller']} compact />
           <div className="stack" style={{ gap: 8 }}>
             {(Object.keys(LISTS) as ListKey[]).map((k) => {
               const found = conn?.lists[k];

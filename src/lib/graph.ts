@@ -112,6 +112,10 @@ export async function deleteItem(siteId: string, listId: string, itemId: string)
   return call<void>(`/sites/${siteId}/lists/${listId}/items/${itemId}`, { method: 'DELETE' });
 }
 
+export async function createList(siteId: string, body: Record<string, unknown>) {
+  return call<SpList>(`/sites/${siteId}/lists`, { method: 'POST', body: JSON.stringify(body) });
+}
+
 export async function me() {
   return call<{ displayName: string; mail: string; userPrincipalName: string }>('/me?$select=displayName,mail,userPrincipalName');
 }

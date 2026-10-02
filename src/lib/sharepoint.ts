@@ -1,7 +1,7 @@
 'use client';
 
 import * as graph from './graph';
-import { EMPTY_DATA, LISTS, type Data, type ListKey, type Row } from './lists';
+import { EMPTY_DATA, LISTS, PROVISION, type Data, type ListKey, type Row } from './lists';
 
 type ColType = 'text' | 'boolean' | 'number' | 'dateTime' | 'choice' | 'person' | 'lookup' | 'readonly';
 
@@ -152,4 +152,19 @@ export function choicesOf(conn: Connection | null, key: ListKey, column: string)
   if (!meta) return undefined;
   const internal = meta.toInternal[column];
   return internal ? meta.choices[internal] : undefined;
+}
+
+/** Creates a missing list with its columns (needs Sites.Manage.All). */
+export async function provision(siteId: string, key: ListKey) {
+  const def = PROVISION[key];
+  if (!def) throw new Error(`${LISTS[key]} kan inte skapas automatiskt.`);
+  const columns = def.columns.map((c) => {
+    const base = { name: c.name, displayName: c.name };
+    if (c.type === 'date') return { ...base, dateTime: { format: 'dateOnly' } };
+    if (c.type === 'number') return { ...base, number: {} };
+    if (c.type === 'choice') return { ...base, choice: { allowTextEntry: true, choices: c.choices ?? [], displayAs: 'dropDownMenu' } };
+    if (c.type === 'note') return { ...base, text: { allowMultipleLines: true, linesForEditing: 4 } };
+    return { ...base, text: {} };
+  });
+  return graph.createList(siteId, { displayName: LISTS[key], description: def.description, columns, list: { template: 'genericList' } });
 }

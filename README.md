@@ -19,6 +19,13 @@ Appen startar i **Demoläge** med exempeldata. För riktig data:
 
 Ingen inloggning: token sparas bara i minnet och i flikens `sessionStorage` och försvinner när fliken stängs.
 
+## Publicera (gratis)
+
+`npm run build` skapar en statisk webbplats i `out/` — allt körs i webbläsaren och token lämnar aldrig datorn.
+
+- **GitHub Pages:** arbetsflödet `.github/workflows/pages.yml` bygger och publicerar vid varje push till `main`. Slå på under *Settings → Pages → Source: GitHub Actions*. Pages på ett **privat** repo kräver GitHub Pro/Team.
+- **Cloudflare Pages / Netlify (gratis även för privata repon):** koppla repot, byggkommando `npm run build`, utdatamapp `out`.
+
 ## Struktur
 
 | Sökväg | Innehåll |

@@ -209,7 +209,36 @@ export function makeDemo(now = new Date()): Data {
 
   const inventeringar: Row[] = [row(1, day(now, -15), { Title: 'Inventering 8B', Startdatum: iso(day(now, -15)).slice(0, 10), Status: 'Avslutad', UtfördAv: 'David' })];
 
+  /* Fire extinguishers */
+  const ext: [string, string, string, number, string][] = [
+    ['A-huset plan 0', 'Huvudentré', 'Pulver 6 kg', 165, 'OK'], ['A-huset plan 1', 'Korridor vid A-104', 'Pulver 6 kg', 18, 'OK'],
+    ['Matsal', 'Kök, vid utgång', 'Kolsyra 5 kg', -4, 'OK'], ['B-huset plan 2', 'B-214, bakom dörren', 'Pulver 6 kg', 245, 'Fel anmält'],
+    ['Idrottshall', 'Redskapsförråd', 'Pulver 6 kg', 28, 'OK'], ['C-huset', 'Slöjdsal trä', 'Skum 6 l', 100, 'Byte beställt'],
+    ['A-huset plan 0', 'IT-rummet', 'Kolsyra 2 kg', 320, 'OK'], ['A-huset plan 1', 'Personalrum', 'Pulver 6 kg', 212, 'OK'],
+    ['B-huset plan 1', 'Trapphus', 'Pulver 6 kg', 192, 'OK'], ['B-huset plan 2', 'Korridor B-2', 'Pulver 6 kg', 150, 'OK'],
+    ['C-huset', 'Slöjdsal metall', 'Kolsyra 5 kg', 300, 'OK'], ['C-huset', 'Hemkunskap', 'Brandfilt', 400, 'OK'],
+    ['Idrottshall', 'Entré', 'Pulver 6 kg', 260, 'OK'], ['Matsal', 'Matsal, norra väggen', 'Pulver 6 kg', 180, 'OK'],
+    ['A-huset plan 2', 'Bibliotek', 'Pulver 6 kg', 140, 'OK'], ['A-huset plan 2', 'Korridor vid A-210', 'Pulver 6 kg', 230, 'OK'],
+    ['B-huset plan 0', 'Elevhälsan', 'Pulver 2 kg', 90, 'OK'], ['B-huset plan 0', 'Musiksal', 'Kolsyra 2 kg', 350, 'OK'],
+  ];
+  const brandslackare: Row[] = ext.map(([plats, detalj, typ, days, status], i) => row(i + 1, day(now, -300), {
+    Title: `BS-${String(i + 1).padStart(2, '0')}`, Plats: plats, PlatsDetalj: detalj, Typ: typ,
+    GiltigTill: iso(day(now, days)).slice(0, 10), SenasteService: iso(day(now, days - 365)).slice(0, 10), Serviceforetag: '', Status: status, Anteckningar: '',
+  }));
+  const brandkontroller: Row[] = [];
+  let bk = 0;
+  brandslackare.forEach((b, i) => {
+    // last month for all, this month for the first six
+    const last = new Date(now.getFullYear(), now.getMonth() - 1, 2);
+    brandkontroller.push(row(++bk, last, { Title: `${b.Title}-${iso(last).slice(0, 7)}`, BrandslackareNr: b.Title, Datum: iso(last).slice(0, 10), Resultat: 'OK', UtfordAv: 'David' }));
+    if (i < 6) {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1, 8, 10 + i);
+      brandkontroller.push(row(++bk, d, { Title: `${b.Title}-${iso(d).slice(0, 7)}`, BrandslackareNr: b.Title, Datum: iso(d), Resultat: b.Status === 'Fel anmält' ? 'Fel' : 'OK', Felorsak: b.Status === 'Fel anmält' ? 'Plomb eller sprint bruten' : '', UtfordAv: 'David' }));
+    }
+  });
+
   return {
+    brandslackare, brandkontroller,
     enheter, elever, personal, tilldelningar, aterlamningar: [], utlaningar, felanmalningar,
     inventeringar, inventeringsrader: [], aktivitetslogg, losenord, skolarenden,
   };

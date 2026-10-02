@@ -5,7 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, Badge, Banner, Button, IconButton, NAV, NavDrawer, SearchBar, Snackbar, TokenStatus } from '@/ds';
 import { useStore } from '@/lib/store';
 import { buildDevices, isOpenCase, serialKey } from '@/lib/derive';
+import { buildExtinguishers } from '@/lib/brand';
 import { str } from '@/lib/lists';
+import { TokenButtons } from '@/components/TokenHelp';
 
 export const ROUTES: Record<string, string> = {
   oversikt: '/',
@@ -26,11 +28,13 @@ export const ROUTES: Record<string, string> = {
   personal: '/personal',
   datakvalitet: '/datakvalitet',
   lasarsbyte: '/lasarsbyte',
+  brandslackare: '/brandslackare',
   installningar: '/installningar',
 };
 
 function activeId(path: string) {
   if (path === '/') return 'oversikt';
+  if (path.startsWith('/brandkontroll')) return 'brandslackare';
   const seg = path.split('/')[1];
   return Object.keys(ROUTES).find((k) => ROUTES[k] === '/' + seg) ?? '';
 }
@@ -79,7 +83,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const d = store.data;
+  const exts = buildExtinguishers(d);
   const counts: Record<string, number> = {
+    brandslackare: exts.filter((e) => e.status === 'Utgången' || e.status === 'Går ut snart' || e.status === 'Fel anmält').length,
     felanmalningar: d.felanmalningar.filter((f) => isOpenCase(f.Status)).length,
     skolarenden: d.skolarenden.filter((f) => isOpenCase(f.Status)).length,
     losenord: d.losenord.filter((p) => str(p.Status) !== 'Klart').length,
@@ -89,7 +95,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (g.label === 'System') items.splice(items.length - 1, 0, { id: 'lasarsbyte', label: 'Läsårsbyte', icon: 'event_repeat', count: undefined });
     return { ...g, items };
   });
-  const notifications = counts.felanmalningar + counts.skolarenden + counts.losenord;
+  const notifications = counts.felanmalningar + counts.skolarenden + counts.losenord + counts.brandslackare;
 
   const onSearch = (raw: string) => {
     const q = raw.trim();
@@ -155,7 +161,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Banner
             tone="error"
             title={ts.state === 'none' ? 'Ingen token' : 'Token har gått ut'}
-            action={<Button variant="danger" icon="content_paste" onClick={() => router.push('/installningar')}>Klistra in ny token</Button>}
+            action={<TokenButtons compact />}
           >
             Du ser data från senaste hämtningen. Inget kan sparas förrän du klistrar in en ny token.
           </Banner>

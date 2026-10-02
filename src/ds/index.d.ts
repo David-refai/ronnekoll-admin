@@ -7,7 +7,8 @@ type RequestStatus = 'Ny' | 'Behandlas' | 'Klart';
 type LoanStatus = 'Aktiv' | 'Återlämnad' | 'Försenad';
 type Priority = 'Låg' | 'Normal' | 'Hög' | 'Akut';
 type SignatureStatus = 'Signerad' | 'Väntar signatur';
-export type Status = DeviceStatus | CaseStatus | RequestStatus | LoanStatus | Priority | SignatureStatus;
+type ExtinguisherStatus = 'OK' | 'Går ut snart' | 'Utgången' | 'Fel anmält' | 'Byte beställt';
+export type Status = DeviceStatus | CaseStatus | RequestStatus | LoanStatus | Priority | SignatureStatus | ExtinguisherStatus;
 
 /** Material Symbols Rounded ligature icon. */
 export interface IconProps { name: string; size?: number; fill?: boolean; label?: string; className?: string; style?: React.CSSProperties }
