@@ -10,13 +10,14 @@ import { useStore } from '@/lib/store';
 
 /** Column in the list ← header names accepted in the file (case and å/ä/ö insensitive). */
 const COLS: { key: string; label: string; names: string[] }[] = [
-  { key: 'Title', label: 'Nummer', names: ['nummer', 'nr', 'title', 'objektsnummer', 'utrustningsnummer'] },
+  { key: 'Title', label: 'Title', names: ['nummer', 'nr', 'title', 'objektsnummer', 'utrustningsnummer'] },
   { key: 'Plats', label: 'Plats', names: ['plats', 'rum'] },
   { key: 'PlatsDetalj', label: 'PlatsDetalj', names: ['platsdetalj', 'placering', 'detalj'] },
   { key: 'Typ', label: 'Typ', names: ['typ'] },
   { key: 'GiltigTill', label: 'GiltigTill', names: ['giltigtill', 'giltig till', 'nasta service', 'utgar'] },
   { key: 'SenasteService', label: 'SenasteService', names: ['senasteservice', 'senaste service', 'underhall utfort'] },
   { key: 'Serviceforetag', label: 'Serviceforetag', names: ['serviceforetag', 'service'] },
+  { key: 'Status', label: 'Status', names: ['status'] },
   { key: 'Anteckningar', label: 'Anteckningar', names: ['anteckningar', 'anteckning', 'kommentar'] },
 ];
 const DATE_KEYS = ['GiltigTill', 'SenasteService'];
@@ -128,7 +129,7 @@ export function ExtImport({ all, onClose }: { all: ExtView[]; onClose(): void })
   };
 
   const template = () => exportXlsx('Brandslackare-mall', COLS.map((c) => ({ label: c.label, value: (r: Rec) => r[c.key] ?? '' })), [
-    { Title: '1509-160', Plats: 'Rum 213', PlatsDetalj: 'Personaltoalett', Typ: 'Pulver 6 kg', GiltigTill: '2027-08-31', SenasteService: '2026-08-01', Serviceforetag: 'Malmö stad', Anteckningar: 'Tillverkad 2026 · omladdning 2036' },
+    { Title: '1509-160', Plats: 'Rum 213', PlatsDetalj: 'Personaltoalett', Typ: 'Pulver 6 kg', GiltigTill: '2036-08-31', SenasteService: '2026-08-01', Serviceforetag: 'Malmö stad', Status: 'OK', Anteckningar: 'Tillverkad 2026 · omladdning 2036' },
   ]);
 
   return (
@@ -150,12 +151,12 @@ export function ExtImport({ all, onClose }: { all: ExtView[]; onClose(): void })
               <input type="file" accept=".xlsx,.csv,.txt" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
               <Icon name="upload_file" size={32} />
               <div style={{ fontWeight: 700, marginTop: 6 }}>{fileName || 'Välj en Excel-fil (.xlsx)'}</div>
-              <div className="small muted">Första raden: Nummer, Plats, PlatsDetalj, Typ, GiltigTill, SenasteService, Serviceforetag, Anteckningar</div>
+              <div className="small muted">Första raden: samma kolumner som listan — Title, Plats, PlatsDetalj, Typ, GiltigTill, SenasteService, Serviceforetag, Status, Anteckningar</div>
             </label>
             <TextField label="…eller klistra in celler från Excel" multiline rows={4} mono value={paste}
               onChange={(e) => { setPaste(e.target.value); setFileName(''); setTable(parseText(e.target.value)); }} />
             {error && <Banner tone="error" title="Fel i filen">{error}</Banner>}
-            {table.length > 0 && !headerOk && <Banner tone="warning" title="Hittar ingen kolumn Nummer">Första raden måste vara rubriker och en av dem heta Nummer.</Banner>}
+            {table.length > 0 && !headerOk && <Banner tone="warning" title="Hittar ingen kolumn Title">Första raden måste vara rubriker och en av dem heta Title (eller Nummer).</Banner>}
             {headerOk && (
               <div className="rk-card" style={{ boxShadow: 'none', background: 'var(--surface-container-low)', padding: 12, maxHeight: 240, overflow: 'auto' }}>
                 <div className="row small" style={{ gap: 8, marginBottom: 8 }}>
