@@ -75,6 +75,8 @@ function toRow(item: graph.SpItem, meta: ListMeta): Row {
     const display = meta.toDisplay[k] ?? (lookup && meta.toDisplay[lookup] ? meta.toDisplay[lookup] + 'Id' : k);
     row[display] = v;
   }
+  // Title is also readable as "Title" when its display name was changed (e.g. to "Nummer").
+  if (!('Title' in row) && 'Title' in item.fields) row.Title = item.fields.Title;
   return row;
 }
 
@@ -97,7 +99,8 @@ function toFields(meta: ListMeta, values: Record<string, unknown>, mode: 'create
   const fields: Record<string, unknown> = {};
   for (const [k, raw] of Object.entries(values)) {
     if (k.startsWith('_')) continue;
-    const internal = meta.toInternal[k];
+    // Display name first; the internal name also works (e.g. Title after it was renamed to "Nummer").
+    const internal = meta.toInternal[k] ?? (meta.types[k] ? k : undefined);
     if (!internal) continue; // unknown column — skip rather than fail the write
     const type = meta.types[internal] ?? 'text';
     if (type === 'readonly' || type === 'person' || type === 'lookup') continue;

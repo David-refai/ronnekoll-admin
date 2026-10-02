@@ -106,7 +106,9 @@ export function buildDevices(data: Data): DeviceView[] {
   });
 }
 
-export const isOpenCase = (s: unknown) => !['Klar', 'Klart', 'Avvisad', 'Stängd'].includes(str(s));
+/** Statuses that close a case. Matches the lists' own wording too (e.g. "Löst"), case-insensitively. */
+const CLOSED = ['klar', 'klart', 'löst', 'åtgärdad', 'åtgärdat', 'avslutad', 'avslutat', 'stängd', 'stängt', 'avvisad', 'avvisat', 'färdig', 'utförd', 'done', 'closed', 'resolved'];
+export const isOpenCase = (s: unknown) => !CLOSED.includes(str(s).trim().toLowerCase());
 
 export function overview(data: Data, devices: DeviceView[]) {
   const count = (s: DeviceStatus) => devices.filter((d) => d.status === s).length;

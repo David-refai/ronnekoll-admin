@@ -116,6 +116,17 @@ export async function createList(siteId: string, body: Record<string, unknown>) 
   return call<SpList>(`/sites/${siteId}/lists`, { method: 'POST', body: JSON.stringify(body) });
 }
 
+/** Sends an e-mail as the signed-in user (needs Mail.Send in the token). */
+export async function sendMail(to: string, subject: string, body: string) {
+  return call<void>('/me/sendMail', {
+    method: 'POST',
+    body: JSON.stringify({
+      message: { subject, body: { contentType: 'Text', content: body }, toRecipients: [{ emailAddress: { address: to } }] },
+      saveToSentItems: true,
+    }),
+  });
+}
+
 export async function me() {
   return call<{ displayName: string; mail: string; userPrincipalName: string }>('/me?$select=displayName,mail,userPrincipalName');
 }
