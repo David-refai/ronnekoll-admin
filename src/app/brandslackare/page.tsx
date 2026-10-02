@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Banner, Button, Chip, DataTable, EmptyState, KpiCard, PageHeader, StatusBadge, type Column, type Status } from '@/ds';
 import { ExtForm, ExtQrLabel, ExtSheet, dueColor } from '@/components/brand';
+import { ExtImport } from '@/components/ExtImport';
 import { ConfirmDelete } from '@/components/ConfirmDelete';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
@@ -32,6 +33,7 @@ export default function Brandslackare() {
   const [edit, setEdit] = React.useState<ExtView | 'new' | null>(null);
   const [del, setDel] = React.useState<ExtView | null>(null);
   const [printing, setPrinting] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
   // Same printer calibration as Etiketter (saved on this computer).
   const margins = React.useMemo(() => {
     try {
@@ -90,6 +92,7 @@ export default function Brandslackare() {
               { label: 'Typ', value: (e) => e.typ }, { label: 'Giltig till', value: (e) => e.giltigTill }, { label: 'Status', value: (e) => e.status },
               { label: 'Senaste service', value: (e) => e.senasteService }, { label: 'Kontrollerad i ' + month, value: (e) => (e.checkedThisMonth ? 'Ja' : 'Nej') },
             ], rows)}>Exportera</Button>
+            <Button variant="outlined" icon="upload_file" disabled={store.readOnly || !!missingList} onClick={() => setImporting(true)}>Importera</Button>
             <Button icon="add" disabled={store.readOnly || !!missingList} onClick={() => setEdit('new')}>Ny brandsläckare</Button>
           </>}
         />
@@ -154,6 +157,7 @@ export default function Brandslackare() {
       )}
 
       {open && !edit && !del && <ExtSheet ext={open} onClose={() => setOpenId(null)} onEdit={() => setEdit(open)} onDelete={() => setDel(open)} />}
+      {importing && <ExtImport all={all} onClose={() => setImporting(false)} />}
       {edit && <ExtForm ext={edit === 'new' ? undefined : edit} all={all} onClose={() => setEdit(null)} />}
       {del && (
         <ConfirmDelete title={`Ta bort ${del.nr}?`} onClose={() => setDel(null)}
