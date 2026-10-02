@@ -56,6 +56,9 @@ a { color: var(--primary); }
 @media (max-width: 640px) {
   .app-nav { display: none; }
   .app-menu-btn { display: inline-flex; }
+  .rk-banner { flex-wrap: wrap; }
+  .rk-banner__text { flex: 1 1 200px; }
+  .rk-banner__action { width: 100%; }
   .app-demo .rk-badge { white-space: normal; height: auto; padding: 4px 10px; }
   .grid-4 { gap: 12px; }
   .form-grid, .check-grid { grid-template-columns: minmax(0, 1fr); }
@@ -92,3 +95,10 @@ a { color: var(--primary); }
 .ext-check .ext-fault { color: var(--status-red); }
 @media (max-width: 1024px) { .ext-layout { grid-template-columns: minmax(0, 1fr); } }
 a.rk-btn { text-decoration: none; }
+
+/* Installed app (PWA): keep content clear of the notch / home indicator */
+@media (display-mode: standalone) {
+  .app-topbar { padding-top: env(safe-area-inset-top); height: calc(var(--topbar-height) + env(safe-area-inset-top)); }
+  .rk-shell__content { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
+  .app-toasts { bottom: calc(24px + env(safe-area-inset-bottom)); }
+}

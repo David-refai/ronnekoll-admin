@@ -6,8 +6,9 @@ import { LISTS, type ListKey } from '@/lib/lists';
 import { useStore } from '@/lib/store';
 import { shortDate } from '@/lib/format';
 import * as graph from '@/lib/graph';
-import { parseSharePoint } from '@/lib/settings';
+import { DEFAULT_SITE, parseSharePoint } from '@/lib/settings';
 import { TokenButtons } from '@/components/TokenHelp';
+import { useInstall } from '@/components/Pwa';
 import { ProvisionLists } from '@/components/ProvisionLists';
 
 export default function Installningar() {
@@ -25,6 +26,7 @@ export default function Installningar() {
   }, [store.settings]);
 
   const t = store.token;
+  const app = useInstall();
   const ts = store.tokenStatus;
 
   const saveToken = () => {
@@ -67,6 +69,25 @@ export default function Installningar() {
   return (
     <>
       <PageHeader title="Inställningar" description="Token, SharePoint-webbplats och datakälla." />
+
+      <section className="rk-card stack" style={{ gap: 12, maxWidth: 880 }}>
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <h2 className="section-title">Installera appen</h2>
+          {app.installed && <Badge tone="green" icon="check_circle">Installerad</Badge>}
+        </div>
+        {app.installed ? (
+          <p className="small muted" style={{ margin: 0 }}>RönneKoll körs som app. Uppdateringar kommer automatiskt nästa gång du öppnar den.</p>
+        ) : app.canPrompt ? (
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <Button icon="install_mobile" onClick={app.install}>Installera RönneKoll</Button>
+            <span className="small muted">Lägger till appen på hemskärmen / i startmenyn.</span>
+          </div>
+        ) : app.ios ? (
+          <p className="small" style={{ margin: 0 }}>På iPhone/iPad: öppna sidan i <b>Safari</b>, tryck på <b>Dela</b> <span className="rk-icon" aria-hidden style={{ fontSize: 16, verticalAlign: 'middle' }}>ios_share</span> och välj <b>Lägg till på hemskärmen</b>.</p>
+        ) : (
+          <p className="small" style={{ margin: 0 }}>Android/Chrome/Edge: öppna webbläsarens meny <b>⋮</b> och välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>. Kräver att sidan är publicerad med https (t.ex. GitHub Pages).</p>
+        )}
+      </section>
 
       <section className="rk-card stack" style={{ gap: 16, maxWidth: 880 }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -115,6 +136,9 @@ export default function Installningar() {
         </div>
         <div className="row">
           <Button icon="save" onClick={saveSite} disabled={!parsed}>Spara och anslut</Button>
+          {(store.settings.hostname !== DEFAULT_SITE.hostname || store.settings.sitePath !== DEFAULT_SITE.sitePath) && (
+            <Button variant="text" icon="restart_alt" onClick={() => store.setSettings({ ...store.settings, ...DEFAULT_SITE, demo: false })}>Rönnenskolans adress</Button>
+          )}
           <Button variant="outlined" icon="refresh" onClick={() => store.reload()} disabled={store.loading}>Hämta data igen</Button>
           {store.loadedAt && <span className="small muted">Senast hämtat {store.loadedAt.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>}
         </div>

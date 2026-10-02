@@ -3,6 +3,7 @@
 import { Button, EmptyState, Skeleton } from '@/ds';
 import { useStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
+import { TokenButtons } from '@/components/TokenHelp';
 
 /** Loading skeleton / error state shared by all data pages. Returns null when data is ready. */
 export function PageState({ rows = 8 }: { rows?: number }) {
@@ -10,6 +11,16 @@ export function PageState({ rows = 8 }: { rows?: number }) {
   const router = useRouter();
   if (store.error) {
     const needsSetup = /Inställningar/.test(store.error);
+    const needsToken = /token/i.test(store.error);
+    if (needsToken) {
+      return (
+        <div className="rk-card" style={{ padding: 0 }}>
+          <EmptyState icon="key" tone="amber" title="Klistra in en token"
+            description="Kopiera Access token i Graph Explorer och tryck på knappen — SharePoint-adressen är redan ifylld."
+            action={<div style={{ display: 'flex', justifyContent: 'center' }}><TokenButtons /></div>} />
+        </div>
+      );
+    }
     return (
       <div className="rk-card" style={{ padding: 0 }}>
         <EmptyState

@@ -129,7 +129,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       />
     );
 
-  const showTokenBanner = store.mode === 'live' && (ts.state === 'expired' || ts.state === 'none') && path !== '/installningar';
+  // Before the first load the page itself asks for a token; the banner is for when it runs out mid-work.
+  const showTokenBanner = store.mode === 'live' && !!store.loadedAt && (ts.state === 'expired' || ts.state === 'none') && path !== '/installningar';
 
   return (
     <div className="rk-shell">

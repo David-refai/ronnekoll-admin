@@ -15,10 +15,12 @@ export interface Settings {
 
 const KEY = 'rk.settings';
 
+/** Rönnenskolan's SharePoint site — the default everywhere, can be changed under Inställningar. */
+export const DEFAULT_SITE = { hostname: 'cityofmalmo.sharepoint.com', sitePath: '/sites/GRFRnnenskolan' };
+
 export const DEFAULT_SETTINGS: Settings = {
-  hostname: '',
-  sitePath: '',
-  demo: true,
+  ...DEFAULT_SITE,
+  demo: false,
   userName: 'David',
 };
 
@@ -26,7 +28,12 @@ export function loadSettings(): Settings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) {
+      const s = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as Settings;
+      // An empty saved address falls back to the school's site.
+      if (!s.hostname) return { ...s, ...DEFAULT_SITE };
+      return s;
+    }
   } catch {
     /* ignore */
   }
