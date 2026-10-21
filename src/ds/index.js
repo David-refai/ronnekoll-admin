@@ -133,7 +133,10 @@ import * as React from 'react';
     // Prioritet
     'Låg': ['gray', 'keyboard_double_arrow_down'], 'Normal': ['blue', 'drag_handle'], 'Hög': ['amber', 'keyboard_double_arrow_up'], 'Akut': ['red', 'priority_high'],
     // Signatur
-    'Signerad': ['green', 'draw'], 'Väntar signatur': ['amber', 'draw']
+    'Signerad': ['green', 'draw'], 'Väntar signatur': ['amber', 'draw'],
+    // Garanti & reparation
+    'Inom garanti': ['green', 'verified_user'], 'Garanti går ut': ['amber', 'gpp_maybe'], 'Garanti utgången': ['gray', 'gpp_bad'], 'Inköpsdatum saknas': ['gray', 'help'],
+    'Mottagen – reparerad': ['green', 'task_alt'], 'Mottagen – ej reparerad': ['red', 'build_circle'], 'Försenad hos leverantör': ['red', 'schedule']
   };
   function Badge(p) {
     return h('span', { className: cx('rk-badge', 'rk-badge--' + (p.tone || 'gray'), p.size === 'lg' && 'rk-badge--lg', p.className) },
@@ -166,7 +169,7 @@ import * as React from 'react';
   }
   var DEFAULT_NAV = [
     { label: 'Översikt', items: [{ id: 'oversikt', label: 'Översikt', icon: 'space_dashboard' }, { id: 'analys', label: 'Analys', icon: 'monitoring' }] },
-    { label: 'Enheter', items: [{ id: 'enheter', label: 'Enheter', icon: 'laptop_chromebook' }, { id: 'importera', label: 'Importera', icon: 'upload_file' }, { id: 'inventering', label: 'Inventering', icon: 'inventory' }, { id: 'etiketter', label: 'Etiketter', icon: 'label' }] },
+    { label: 'Enheter', items: [{ id: 'enheter', label: 'Enheter', icon: 'laptop_chromebook' }, { id: 'importera', label: 'Importera', icon: 'upload_file' }, { id: 'reparationer', label: 'Reparationer', icon: 'home_repair_service' }, { id: 'inventering', label: 'Inventering', icon: 'inventory' }, { id: 'etiketter', label: 'Etiketter', icon: 'label' }] },
     { label: 'Elever & utdelning', items: [{ id: 'elever', label: 'Elever', icon: 'school' }, { id: 'tilldelning', label: 'Tilldelning', icon: 'assignment_ind' }, { id: 'aterlamning', label: 'Återlämning', icon: 'assignment_return' }, { id: 'utlaning', label: 'Tillfällig utlåning', icon: 'schedule' }] },
     { label: 'Ärenden', items: [{ id: 'felanmalningar', label: 'Felanmälningar', icon: 'report', count: 7 }, { id: 'skolarenden', label: 'Skolärenden', icon: 'handyman', count: 3 }, { id: 'losenord', label: 'Lösenordsbegäran', icon: 'password', count: 2 }, { id: 'brandslackare', label: 'Brandsläckare', icon: 'fire_extinguisher', count: 3 }] },
     { label: 'Rapporter', items: [{ id: 'rapporter', label: 'Rapporter', icon: 'summarize' }, { id: 'logg', label: 'Aktivitetslogg', icon: 'history' }] },

@@ -20,6 +20,7 @@ export const LISTS = {
   skolarenden: 'List av felanmälan vaktmästare',
   brandslackare: 'Brandslackare',
   brandkontroller: 'Brandkontroller',
+  reparationer: 'Reparationer',
 } as const;
 
 export type ListKey = keyof typeof LISTS;
@@ -53,6 +54,7 @@ export const EMPTY_DATA: Data = {
   skolarenden: [],
   brandslackare: [],
   brandkontroller: [],
+  reparationer: [],
 };
 
 /* ---------- Device status ---------- */
@@ -127,7 +129,26 @@ export const PROVISION: Partial<Record<ListKey, { description: string; columns: 
       { name: 'UtfordAv', type: 'text' },
     ],
   },
+  reparationer: {
+    description: 'Enheter som skickats på reparation eller garanti (RönneKoll). En rad per enhet och utskick.',
+    columns: [
+      { name: 'EnhetID', type: 'text' },
+      { name: 'FelanmalanID', type: 'text' },
+      { name: 'Kollinummer', type: 'text' },
+      { name: 'Leverantor', type: 'choice', choices: ['HP garanti', 'Atea', 'Annan'] },
+      { name: 'Arendenummer', type: 'text' },
+      { name: 'Skickad', type: 'date' },
+      { name: 'Mottagen', type: 'date' },
+      { name: 'Status', type: 'choice', choices: ['Skickad på reparation', 'Mottagen – reparerad', 'Mottagen – ej reparerad'] },
+      { name: 'Atgard', type: 'note' },
+    ],
+  },
 };
+
+export const REPAIR_OUT = 'Skickad på reparation';
+export const REPAIR_FIXED = 'Mottagen – reparerad';
+export const REPAIR_NOT_FIXED = 'Mottagen – ej reparerad';
+export const SUPPLIERS = ['HP garanti', 'Atea', 'Annan'];
 
 export const EXT_STATUSES = ['OK', 'Går ut snart', 'Utgången', 'Fel anmält', 'Byte beställt'] as const;
 export type ExtStatus = (typeof EXT_STATUSES)[number];

@@ -8,7 +8,9 @@ type LoanStatus = 'Aktiv' | 'Återlämnad' | 'Försenad';
 type Priority = 'Låg' | 'Normal' | 'Hög' | 'Akut';
 type SignatureStatus = 'Signerad' | 'Väntar signatur';
 type ExtinguisherStatus = 'OK' | 'Går ut snart' | 'Utgången' | 'Fel anmält' | 'Byte beställt';
-export type Status = DeviceStatus | CaseStatus | RequestStatus | LoanStatus | Priority | SignatureStatus | ExtinguisherStatus;
+export type WarrantyStatus = 'Inom garanti' | 'Garanti går ut' | 'Garanti utgången' | 'Inköpsdatum saknas';
+export type RepairStatus = 'Skickad på reparation' | 'Mottagen – reparerad' | 'Mottagen – ej reparerad' | 'Försenad hos leverantör';
+export type Status = DeviceStatus | CaseStatus | RequestStatus | LoanStatus | Priority | SignatureStatus | ExtinguisherStatus | WarrantyStatus | RepairStatus;
 
 /** Material Symbols Rounded ligature icon. */
 export interface IconProps { name: string; size?: number; fill?: boolean; label?: string; className?: string; style?: React.CSSProperties }

@@ -6,6 +6,7 @@ import { Avatar, Badge, Banner, Button, IconButton, NAV, NavDrawer, SearchBar, S
 import { useStore } from '@/lib/store';
 import { buildDevices, isOpenCase, serialKey } from '@/lib/derive';
 import { buildExtinguishers } from '@/lib/brand';
+import { REPAIR_OUT } from '@/lib/lists';
 import { str } from '@/lib/lists';
 import { TokenButtons } from '@/components/TokenHelp';
 
@@ -14,6 +15,7 @@ export const ROUTES: Record<string, string> = {
   analys: '/analys',
   enheter: '/enheter',
   importera: '/importera',
+  reparationer: '/reparationer',
   inventering: '/inventering',
   etiketter: '/etiketter',
   elever: '/elever',
@@ -89,6 +91,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     felanmalningar: d.felanmalningar.filter((f) => isOpenCase(f.Status)).length,
     skolarenden: d.skolarenden.filter((f) => isOpenCase(f.Status)).length,
     losenord: d.losenord.filter((p) => str(p.Status) !== 'Klart').length,
+    reparationer: d.reparationer.filter((r) => (str(r.Status) || REPAIR_OUT) === REPAIR_OUT).length,
   };
   const groups = NAV.map((g) => {
     const items = g.items.map((it) => ({ ...it, count: counts[it.id] || undefined }));

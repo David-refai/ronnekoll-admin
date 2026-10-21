@@ -6,11 +6,12 @@ import { Avatar, Badge, Button, Icon, SideSheet, StatusBadge, Tabs, Timeline, ty
 import { serialKey, type DeviceView } from '@/lib/derive';
 import { relDate, shortDate } from '@/lib/format';
 import { str, yes, type Row } from '@/lib/lists';
+import { warranty } from '@/lib/repair';
 import { useStore } from '@/lib/store';
 
 const LOG_TYPE: Record<string, TimelineEvent['type']> = {
   tilldelning: 'tilldelning', återlämning: 'aterlamning', utlåning: 'utlaning', statusändring: 'status', byte: 'status',
-  felanmälan: 'felanmalan', inventering: 'inventering', import: 'import', 'ny enhet': 'import', kontrakt: 'kontrakt', etikett: 'etikett',
+  felanmälan: 'felanmalan', reparation: 'felanmalan', inventering: 'inventering', import: 'import', 'ny enhet': 'import', kontrakt: 'kontrakt', etikett: 'etikett',
 };
 
 export function DeviceSheet({
@@ -103,6 +104,9 @@ export function DeviceSheet({
           <Button variant="tonal" size="sm" icon="swap_horiz" disabled={store.readOnly} onClick={onSwap}>Byt enhet</Button>
         )}
         <Button variant="tonal" size="sm" icon="report" onClick={() => router.push(`/felanmalningar?enhet=${encodeURIComponent(device.serial)}`)}>Skapa felanmälan</Button>
+        {device.status !== 'Under reparation' && device.status !== 'Kasserad' && (
+          <Button variant="tonal" size="sm" icon="local_shipping" onClick={() => router.push(`/reparationer/skicka?enhet=${encodeURIComponent(device.serial)}`)}>Skicka på reparation</Button>
+        )}
         <Button variant="tonal" size="sm" icon="print" onClick={() => router.push(`/etiketter?serials=${encodeURIComponent(device.serial)}`)}>Skriv ut etikett</Button>
         {!h && device.status === 'Tillgänglig' && (
           <Button variant="tonal" size="sm" icon="assignment_ind" onClick={() => router.push(`/tilldelning?enhet=${encodeURIComponent(device.serial)}`)}>Tilldela</Button>
@@ -116,6 +120,7 @@ export function DeviceSheet({
         <dt>Tillhör klass</dt><dd>{device.klass || '—'}</dd>
         <dt>Plats</dt><dd>{device.plats || '—'}</dd>
         <dt>Inköpsdatum</dt><dd>{shortDate(device.inkop)}</dd>
+        <dt>Garanti</dt><dd className="row" style={{ gap: 8, flexWrap: 'wrap' }}>{(() => { const w = warranty(device.inkop); return <><StatusBadge status={w.state} /><span className="small muted">{w.text}</span></>; })()}</dd>
         <dt>Senast inventerad</dt><dd>{shortDate(device.senastInv)}</dd>
       </dl>
 

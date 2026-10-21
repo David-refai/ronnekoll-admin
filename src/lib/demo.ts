@@ -237,8 +237,33 @@ export function makeDemo(now = new Date()): Data {
     }
   });
 
+  /* Repairs: four devices out with the supplier, two back */
+  const reparationer: Row[] = [];
+  const sentFaults = felanmalningar.filter((f) => f.Status === 'Skickad på reparation').slice(0, 4);
+  const lev = ['HP garanti', 'HP garanti', 'Atea', 'HP garanti'];
+  const ago = [12, 7, 35, 7];
+  sentFaults.forEach((f, i) => {
+    const sent = day(now, -ago[i]);
+    reparationer.push(row(i + 1, sent, {
+      Title: `${f.EnhetID} · ${iso(sent).slice(0, 10)}`, EnhetID: f.EnhetID, FelanmalanID: f._id, Kollinummer: `0037073025401235${pad(2210 + i * 17, 4)}`,
+      Leverantor: lev[i], Arendenummer: i === 3 ? '' : `5104 ${pad(880 + i * 11)} ${pad(371 + i * 7)}`, Skickad: iso(sent).slice(0, 10), Mottagen: '', Status: 'Skickad på reparation', Atgard: '',
+    }));
+    const d = enheter.find((e) => e.Serienummer === f.EnhetID);
+    if (d) d.Status = 'Under reparation';
+  });
+  felanmalningar.filter((f) => f.Status === 'Skickad på reparation').slice(4).forEach((f) => { f.Status = 'Pågående'; });
+  const back = felanmalningar.filter((f) => f.Status === 'Klar').slice(0, 2);
+  back.forEach((f, i) => {
+    const sent = day(now, -(30 + i * 9));
+    reparationer.push(row(10 + i, sent, {
+      Title: `${f.EnhetID} · ${iso(sent).slice(0, 10)}`, EnhetID: f.EnhetID, FelanmalanID: f._id, Kollinummer: `003707302540123${pad(41120 + i, 5)}`,
+      Leverantor: 'HP garanti', Arendenummer: `5104 7${pad(i * 31)} 120`, Skickad: iso(sent).slice(0, 10), Mottagen: iso(day(sent, 8 + i * 3)).slice(0, 10),
+      Status: i ? 'Mottagen – ej reparerad' : 'Mottagen – reparerad', Atgard: i ? 'Vätskeskada täcks inte av garantin' : 'Bytt skärm. Testad OK.',
+    }));
+  });
+
   return {
-    brandslackare, brandkontroller,
+    brandslackare, brandkontroller, reparationer,
     enheter, elever, personal, tilldelningar, aterlamningar: [], utlaningar, felanmalningar,
     inventeringar, inventeringsrader: [], aktivitetslogg, losenord, skolarenden,
   };
