@@ -282,7 +282,8 @@ export default function Importera() {
 
   return (
     <>
-      <PageHeader title="Importera enheter" description="Ta emot en leverans: läs in en Excel-fil, klistra in en lista eller skanna enheterna en i taget." />
+      <PageHeader title="Importera enheter" description="Ta emot en leverans: läs in en Excel-fil, klistra in en lista eller skanna enheterna en i taget."
+        actions={<Button variant="outlined" icon="event" onClick={() => router.push('/importera/inkopsdatum')}>Uppdatera inköpsdatum</Button>} />
       {!ready ? <PageState /> : (
         <div className="stack" style={{ gap: 24 }}>
           <Stepper steps={STEPS} current={step} />
