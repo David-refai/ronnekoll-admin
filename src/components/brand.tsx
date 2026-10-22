@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 import { Banner, Button, Chip, Dialog, Icon, SideSheet, StatusBadge, TextField, type Status } from '@/ds';
 import { Portal } from '@/components/Portal';
 import { log } from '@/lib/actions';
@@ -228,18 +229,25 @@ export function ExtSheet({ ext, onClose, onEdit, onDelete }: { ext: ExtView; onC
 
 export function ExtQrLabel({ ext }: { ext: ExtView }) {
   const [src, setSrc] = React.useState('');
+  const bar = React.useRef<SVGSVGElement>(null);
   React.useEffect(() => {
     QRCode.toDataURL(ext.nr, { margin: 0, width: 256, errorCorrectionLevel: 'M' }).then(setSrc).catch(() => setSrc(''));
+    // Code128 too, for USB scanners that only read line barcodes.
+    if (bar.current) {
+      try {
+        JsBarcode(bar.current, ext.nr, { format: 'CODE128', displayValue: false, margin: 0, height: 40, width: 1.6, background: '#ffffff', lineColor: '#000000' });
+      } catch { /* empty number */ }
+    }
   }, [ext.nr]);
   return (
     <div className="label" style={{ width: '70mm', height: '36mm' }}>
-      {src && <img src={src} alt="" style={{ width: '28mm', height: '28mm', flexShrink: 0 }} />}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '2.4mm', fontWeight: 700, letterSpacing: '0.05em' }}>BRANDSLÄCKARE</div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '7mm', lineHeight: 1.1 }}>{ext.nr}</div>
-        <div style={{ fontSize: '2.6mm', lineHeight: 1.25 }}>{ext.plats}</div>
-        <div style={{ fontSize: '2.4mm', lineHeight: 1.25 }}>{ext.detalj}</div>
-        <div style={{ fontSize: '2mm', marginTop: '1mm' }}>Rönnenskolan – Malmö stad</div>
+      {src && <img src={src} alt="" style={{ width: '24mm', height: '24mm', flexShrink: 0 }} />}
+      <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontSize: '2.2mm', fontWeight: 700, letterSpacing: '0.05em' }}>BRANDSLÄCKARE</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '5.6mm', lineHeight: 1.1 }}>{ext.nr}</div>
+        <div style={{ fontSize: '2.4mm', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[ext.plats, ext.detalj].filter(Boolean).join(' · ')}</div>
+        <svg ref={bar} style={{ width: '100%', height: '8mm', marginTop: '1mm' }} preserveAspectRatio="none" aria-hidden />
+        <div style={{ fontSize: '1.8mm', marginTop: '0.6mm' }}>Rönnenskolan – Malmö stad</div>
       </div>
     </div>
   );

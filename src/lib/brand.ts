@@ -28,6 +28,8 @@ export interface ExtView {
 }
 
 export const SOON_DAYS = 30;
+/** 1509-130, 1509/130 and 1509+130 (Swedish layout) all match. */
+export const extKey = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 export const thisMonth = () => monthKey(new Date());
 const MONTHS = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'];

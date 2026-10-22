@@ -4,9 +4,9 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, EmptyState, Icon, IconButton, StatusBadge, type Status } from '@/ds';
 import { FaultDialog, dueColor } from '@/components/brand';
-import { CameraScanner } from '@/components/Scan';
+import { CameraScanner, ScanInput } from '@/components/Scan';
 import { PageState, useReady } from '@/components/PageState';
-import { buildExtinguishers, byUrgency, checkOk, monthName, type ExtView } from '@/lib/brand';
+import { buildExtinguishers, byUrgency, checkOk, extKey, monthName, type ExtView } from '@/lib/brand';
 import { relDate, shortDate } from '@/lib/format';
 import { useStore } from '@/lib/store';
 
@@ -25,6 +25,7 @@ export default function Brandkontroll() {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [cam, setCam] = React.useState(false);
   const [focus, setFocus] = React.useState<string | null>(null);
+  const [scan, setScan] = React.useState('');
   const done = all.filter((e) => e.checkedThisMonth).length;
 
   const ok = async (e: ExtView) => {
@@ -41,8 +42,10 @@ export default function Brandkontroll() {
 
   const onScan = (text: string) => {
     setCam(false);
-    const nr = text.trim().toUpperCase();
-    const e = all.find((x) => x.nr.toUpperCase() === nr);
+    setScan('');
+    const nr = extKey(text);
+    if (!nr) return;
+    const e = all.find((x) => extKey(x.nr) === nr);
     if (!e) return store.toast({ icon: 'error', message: `Hittar ingen brandsläckare ${text}` });
     setFocus(e.id);
     setTimeout(() => document.getElementById(`ext-${e.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
@@ -62,6 +65,7 @@ export default function Brandkontroll() {
           </div>
           <IconButton icon="qr_code_scanner" variant="tonal" label="Skanna QR på släckaren" onClick={() => setCam(true)} />
         </div>
+        <ScanInput shortcut={false} placeholder="Skanna streckkoden på släckaren (USB-läsare)" value={scan} onChange={(e) => setScan(e.target.value)} onScan={onScan} />
         <div className="row" style={{ justifyContent: 'space-between', fontSize: 14, fontWeight: 700 }}>
           <span>{done} av {all.length} kontrollerade</span><span className="muted">{all.length - done} kvar</span>
         </div>

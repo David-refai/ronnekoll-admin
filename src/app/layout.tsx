@@ -3,6 +3,7 @@ import './globals.css';
 import { StoreProvider } from '@/lib/store';
 import { Shell } from '@/components/Shell';
 import { Pwa } from '@/components/Pwa';
+import { ScannerFix } from '@/components/ScannerFix';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <StoreProvider>
           <Shell>{children}</Shell>
           <Pwa />
+          <ScannerFix />
         </StoreProvider>
       </body>
     </html>

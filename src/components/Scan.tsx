@@ -73,7 +73,7 @@ export function ScanInput(props: SearchBarProps & { onScan(text: string): void }
   const { onScan, ...rest } = props;
   const [cam, setCam] = React.useState(false);
   return (
-    <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+    <div className="row" style={{ gap: 8, alignItems: 'center' }} data-scan>
       <div style={{ flex: 1, minWidth: 0 }}>
         <SearchBar {...rest} onSubmit={onScan} />
       </div>

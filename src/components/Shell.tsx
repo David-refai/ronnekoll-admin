@@ -151,7 +151,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="app-menu-btn">
             <IconButton icon="menu" label="Meny" onClick={() => setMobileNav(true)} />
           </span>
-          <div className="rk-topbar__search" ref={searchWrap}>
+          <div className="rk-topbar__search" ref={searchWrap} data-scan>
             <SearchBar onSubmit={onSearch} />
           </div>
           <div className="rk-topbar__actions">

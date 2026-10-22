@@ -159,9 +159,9 @@ function SkickaInner() {
                 {dot(2)}
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Försändelse</h2>
               </div>
-              <TextField label="Kollinummer *" mono leadingIcon="barcode_scanner" value={kolli} onChange={(e) => setKolli(e.target.value)}
+              <div data-scan><TextField label="Kollinummer *" mono leadingIcon="barcode_scanner" value={kolli} onChange={(e) => setKolli(e.target.value)}
                 helper="Skanna streckkoden på fraktsedeln"
-                trailing={<IconButton icon="photo_camera" label="Skanna med kameran" onClick={() => setKolliCam(true)} />} />
+                trailing={<IconButton icon="photo_camera" label="Skanna med kameran" onClick={() => setKolliCam(true)} />} /></div>
               {kolliCam && <CameraScanner onClose={() => setKolliCam(false)} onResult={(t) => { setKolliCam(false); setKolli(t.trim()); }} />}
               <div>
                 <span className="field-label">Leverantör</span>
