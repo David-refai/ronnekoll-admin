@@ -19,9 +19,14 @@ const KATEGORI: Record<string, { agande: string; produkt?: string }> = {
 function parseLabel(raw: string) {
   const t = raw.trim();
   const lab = (re: RegExp) => t.match(re)?.[1]?.trim() ?? null;
-  let sn = lab(/(?:S\/?N|Serial(?:\s*No\.?)?|Serienummer)\s*[:#]?\s*([A-Z0-9]{6,16})/i);
-  let pn = lab(/(?:P\/?N|Product(?:\s*No\.?)?|Produkt(?:nummer)?)\s*[:#]?\s*([A-Z0-9]{4,12})(?:#[A-Z0-9]{3})?/i);
+  let sn = lab(/(?:S\/?N#?|Serial(?:\s*No\.?)?|Serienummer)\s*[:#]?\s*([A-Z0-9]{6,16})/i);
+  let pn = lab(/(?:P\/?N|Prod\s*[IL1]D|Product(?:\s*No\.?)?|Produkt(?:nummer)?)\s*[:#]?\s*([A-Z0-9]{4,12})(?:#[A-Z0-9]{3})?/i);
   const model = lab(/(?:Model|Modell)\s*[:#]?\s*([^;|\r\n]+)/i);
+  // HP Data Matrix: "CND6110J8J,5R1F9ES#UUW,HP Fortis Flip G1m 11 Chromebook"
+  const csv = t.split(',').map((x) => x.trim());
+  if (!sn && csv.length >= 2 && /^[A-Z0-9]{6,16}$/i.test(csv[0])) {
+    return { sn: serialKey(csv[0]), pn: csv[1].split('#')[0].toUpperCase() || null, model: csv.slice(2).join(', ') || model || '' };
+  }
   if (!sn) {
     const parts = t.split(/[\s;|,\t]+/).filter(Boolean);
     sn = parts[0] ?? '';
@@ -170,7 +175,7 @@ export default function NyEnhet() {
       />
       {!ready ? <PageState /> : (
         <div className="stack" style={{ gap: 18 }}>
-          <ScanInput size="lg" scanning autoFocus shortcut={false} placeholder="Skanna originaletiketten — eller skriv serienumret och tryck Enter"
+          <ScanInput ocr="label" size="lg" scanning autoFocus shortcut={false} placeholder="Skanna originaletiketten — eller skriv serienumret och tryck Enter"
             value={raw} onChange={(e) => setRaw(e.target.value)} onScan={scan} disabled={busy || store.readOnly} />
 
           <div className="grid-7-5">

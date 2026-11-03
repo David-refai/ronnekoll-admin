@@ -36,7 +36,8 @@ const time = (r: Row, ...keys: string[]) => {
 };
 
 /** Normalises a serial/AssetID; strips scanner prefixes like "S/N:". */
-export const serialKey = (s: unknown) => str(s).trim().replace(/^S\/?N[:\s]*/i, '').trim().toUpperCase();
+/** Normalised serial. Also accepts a whole HP Data Matrix ("CND6110J8J,5R1F9ES#UUW,HP Fortis…") and keeps the serial. */
+export const serialKey = (s: unknown) => str(s).split(',')[0].trim().replace(/^S\/?N#?[:\s]*/i, '').trim().toUpperCase();
 
 export function indexStudents(data: Data) {
   const map = new Map<string, Row>();
