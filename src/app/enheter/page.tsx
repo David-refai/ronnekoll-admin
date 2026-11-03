@@ -17,14 +17,15 @@ import { buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { daysSince, shortDate } from '@/lib/format';
 import { DEVICE_STATUSES, DISCONNECTING, type DeviceStatus } from '@/lib/lists';
+import { warranty } from '@/lib/repair';
 import { useStore } from '@/lib/store';
 
 const PAGE = 50;
 
-type SortKey = 'assetId' | 'serial' | 'modell' | 'kategori' | 'status' | 'elev' | 'klass' | 'agande' | 'plats' | 'senastInv';
+type SortKey = 'assetId' | 'serial' | 'modell' | 'kategori' | 'status' | 'elev' | 'klass' | 'agande' | 'plats' | 'senastInv' | 'garanti';
 
 const sortVal = (d: DeviceView, k: SortKey) =>
-  k === 'elev' ? d.holder?.namn ?? '' : k === 'status' ? String(DEVICE_STATUSES.indexOf(d.status)).padStart(2, '0') : String(d[k] ?? '');
+  k === 'garanti' ? String(warranty(d.inkop).daysLeft ?? 99999).padStart(6, '0') : k === 'elev' ? d.holder?.namn ?? '' : k === 'status' ? String(DEVICE_STATUSES.indexOf(d.status)).padStart(2, '0') : String(d[k] ?? '');
 
 function EnheterInner() {
   const store = useStore();
@@ -42,6 +43,8 @@ function EnheterInner() {
   const [plats, setPlats] = React.useState<string | null>(null);
   const [stale, setStale] = React.useState(false);
   const [noLabel, setNoLabel] = React.useState(false);
+  const [warrSoon, setWarrSoon] = React.useState(false);
+  const [noInkop, setNoInkop] = React.useState(params.get('inkop') === 'saknas');
   const [view, setView] = React.useState<'tabell' | 'kort'>('tabell');
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>('comfortable');
   const [sort, setSort] = React.useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'assetId', dir: 'asc' });
@@ -62,8 +65,9 @@ function EnheterInner() {
     setOpenSerial(params.get('open'));
   }, [params]);
 
-  React.useEffect(() => setPage(0), [q, status, klass, modell, kategori, plats, stale, noLabel]);
+  React.useEffect(() => setPage(0), [q, status, klass, modell, kategori, plats, stale, noLabel, warrSoon, noInkop]);
 
+  const soon = (d: DeviceView) => { const w = warranty(d.inkop); return w.daysLeft != null && w.daysLeft >= 0 && w.daysLeft <= 90; };
   const filtered = React.useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = devices.filter((d) => {
@@ -74,6 +78,8 @@ function EnheterInner() {
       if (plats && d.plats !== plats) return false;
       if (stale && d.senastInv && daysSince(d.senastInv) < 90) return false;
       if (noLabel && d.assetId) return false;
+      if (warrSoon && !soon(d)) return false;
+      if (noInkop && d.inkop) return false;
       if (needle) {
         const hay = [d.assetId, d.serial, d.modell, d.holder?.namn, d.klass, d.plats].join(' ').toLowerCase();
         if (!hay.includes(needle)) return false;
@@ -82,7 +88,7 @@ function EnheterInner() {
     });
     const dir = sort.dir === 'asc' ? 1 : -1;
     return list.sort((a, b) => sortVal(a, sort.key).localeCompare(sortVal(b, sort.key), 'sv', { numeric: true }) * dir);
-  }, [devices, q, status, klass, modell, kategori, plats, stale, noLabel, sort]);
+  }, [devices, q, status, klass, modell, kategori, plats, stale, noLabel, warrSoon, noInkop, sort]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const rows = filtered.slice(page * PAGE, page * PAGE + PAGE);
@@ -100,10 +106,12 @@ function EnheterInner() {
   };
   const staleCount = devices.filter((d) => !d.senastInv || daysSince(d.senastInv) >= 90).length;
   const noLabelCount = devices.filter((d) => !d.assetId).length;
-  const anyFilter = !!(q || status || klass || modell || kategori || plats || stale || noLabel);
+  const soonCount = devices.filter(soon).length;
+  const noInkopCount = devices.filter((d) => !d.inkop).length;
+  const anyFilter = !!(q || status || klass || modell || kategori || plats || stale || noLabel || warrSoon || noInkop);
 
   const clearFilters = () => {
-    setQ(''); setStatus(null); setKlass(null); setModell(null); setKategori(null); setPlats(null); setStale(false); setNoLabel(false);
+    setQ(''); setStatus(null); setKlass(null); setModell(null); setKategori(null); setPlats(null); setStale(false); setNoLabel(false); setWarrSoon(false); setNoInkop(false);
     router.replace('/enheter');
   };
 
@@ -125,6 +133,7 @@ function EnheterInner() {
       { label: 'Ägandetyp', value: (d) => d.agande },
       { label: 'Plats', value: (d) => d.plats },
       { label: 'Inköpsdatum', value: (d) => d.inkop },
+      { label: 'Garanti', value: (d) => { const w = warranty(d.inkop); return `${w.state} ${w.text}`; } },
       { label: 'Senast inventerad', value: (d) => d.senastInv },
     ], list);
 
@@ -144,7 +153,12 @@ function EnheterInner() {
     { key: 'status', label: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { key: 'elev', label: 'Tilldelad till', render: (r) => r.holder?.namn ?? <span className="rk-muted">—</span> },
     { key: 'klass', label: 'Klass', render: (r) => r.klass || '—' },
-    { key: 'agande', label: 'Ägandetyp', render: (r) => (r.agande ? <Badge>{r.agande}</Badge> : '—') },
+    {
+      key: 'garanti', label: 'Garanti',
+      render: (r) => { const w = warranty(r.inkop); return (
+        <span title={w.long} style={{ whiteSpace: 'nowrap' }}><StatusBadge status={w.state} /></span>
+      ); },
+    },
     { key: 'plats', label: 'Plats', render: (r) => r.plats || '—' },
     {
       key: 'senastInv', label: 'Senast inventerad',
@@ -160,7 +174,8 @@ function EnheterInner() {
         actions={
           <>
             <Button variant="outlined" icon="upload_file" onClick={() => router.push('/importera')} disabled={store.readOnly}>Importera</Button>
-            <Button icon="add" onClick={() => setEditFor('new')} disabled={store.readOnly}>Ny enhet</Button>
+            <Button variant="outlined" icon="edit_note" onClick={() => setEditFor('new')} disabled={store.readOnly}>Ny enhet manuellt</Button>
+            <Button icon="barcode_scanner" onClick={() => router.push('/enheter/ny')} disabled={store.readOnly}>Skanna in enheter</Button>
           </>
         }
       />
@@ -179,6 +194,8 @@ function EnheterInner() {
               <FilterMenu label="Plats" value={plats} onChange={setPlats} options={opt((d) => d.plats)} />
               <Chip label="Ej inventerad 90 d" count={staleCount} selected={stale} onClick={() => setStale(!stale)} />
               <Chip label="Utan etikett" count={noLabelCount} selected={noLabel} onClick={() => setNoLabel(!noLabel)} />
+              <Chip label="Garantin slutar inom 90 dagar" icon="gpp_maybe" count={soonCount} selected={warrSoon} onClick={() => setWarrSoon(!warrSoon)} />
+              <Chip label="Saknar inköpsdatum" icon="event_busy" count={noInkopCount} selected={noInkop} onClick={() => setNoInkop(!noInkop)} />
               {anyFilter && <Button variant="text" size="sm" onClick={clearFilters}>Rensa filter</Button>}
             </div>
             <div className="rk-filterbar__trailing">
