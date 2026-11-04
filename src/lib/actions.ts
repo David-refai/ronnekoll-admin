@@ -83,10 +83,12 @@ export interface DeviceInput {
   Inköpsdatum: string;
   Agandetyp: string;
   Anteckningar: string;
+  /** Stored value as in the list's Status choices; defaults to Tillgänglig. */
+  Status?: string;
 }
 
 export async function createDevice(store: Store, v: DeviceInput) {
-  await store.create('enheter', { ...v, Title: v.AssetID, Status: 'Tillgänglig', TillhorKlass: '' });
+  await store.create('enheter', { TillhorKlass: '', ...v, Title: v.AssetID, Status: v.Status || 'Tillgänglig' });
   await log(store, { typ: 'Ny enhet', enhetId: v.Serienummer, detaljer: `${v.Modell} lades till (${v.AssetID || 'utan AssetID'})` });
 }
 

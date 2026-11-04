@@ -7,6 +7,7 @@ import { ScanInput } from '@/components/Scan';
 import { PageState, useReady } from '@/components/PageState';
 import { createDevice, log } from '@/lib/actions';
 import { buildDevices, serialKey, unique } from '@/lib/derive';
+import { DEVICE_STATUSES, deviceStatus, storedDeviceStatus } from '@/lib/lists';
 import { useStore } from '@/lib/store';
 
 const PREFIX = 'RÖGR';
@@ -45,7 +46,7 @@ function loadCatalog(): Record<string, string> {
   }
 }
 
-interface Form { sn: string; pn: string | null; model: string; asset: string; kat: string; plats: string }
+interface Form { sn: string; pn: string | null; model: string; asset: string; kat: string; plats: string; status: string }
 interface Added { id?: string; sn: string; model: string; asset: string }
 
 export default function NyEnhet() {
@@ -53,6 +54,11 @@ export default function NyEnhet() {
   const ready = useReady();
   const router = useRouter();
   const devices = React.useMemo(() => buildDevices(store.data), [store.data]);
+  // Status, Plats and Kategori are choice columns in SharePoint: offer exactly the list's own options.
+  const statuses = store.choices('enheter', 'Status', DEVICE_STATUSES.map(storedDeviceStatus));
+  const statusDefault = statuses.find((x) => deviceStatus(x) === 'Tillgänglig') ?? statuses[0] ?? 'Tillgänglig';
+  const places = unique([...store.choices('enheter', 'Plats', []), ...devices.map((d) => d.plats), 'IT-förråd']);
+  const kategorier = store.choices('enheter', 'Kategori', Object.keys(KATEGORI));
 
   // P/N → modell: learnt from earlier saves (stored as "P/N: …" in Anteckningar, so it follows you to every computer).
   const [localCat, setLocalCat] = React.useState<Record<string, string>>({});
@@ -68,7 +74,7 @@ export default function NyEnhet() {
 
   const [raw, setRaw] = React.useState('');
   const [autoSave, setAutoSave] = React.useState(true);
-  const [form, setForm] = React.useState<Form>({ sn: '', pn: null, model: '', asset: '', kat: 'Elev', plats: 'IT-förråd' });
+  const [form, setForm] = React.useState<Form>({ sn: '', pn: null, model: '', asset: '', kat: 'Elev', plats: 'IT-förråd', status: '' });
   const [assetEdited, setAssetEdited] = React.useState(false);
   const [added, setAdded] = React.useState<Added[]>([]);
   const [busy, setBusy] = React.useState(false);
@@ -104,10 +110,11 @@ export default function NyEnhet() {
   const save = async (f: Form, a: string) => {
     setBusy(true);
     try {
-      const k = KATEGORI[f.kat];
+      const k = KATEGORI[f.kat] ?? { agande: '' };
+      const st = f.status || statusDefault;
       await createDevice(store, {
         AssetID: a, Serienummer: f.sn, Modell: f.model.trim(), ProduktID: /ipad/i.test(f.model) ? 'iPad' : /chromebook|fortis/i.test(f.model) ? 'Chromebook' : 'PC',
-        Kategori: f.kat, Agandetyp: k.agande, Plats: f.plats || 'IT-förråd', Inköpsdatum: '', Anteckningar: f.pn ? `P/N: ${f.pn}` : '',
+        Kategori: f.kat, Agandetyp: k.agande, Plats: f.plats || 'IT-förråd', Status: st, Inköpsdatum: '', Anteckningar: f.pn ? `P/N: ${f.pn}` : '',
       });
       if (f.pn && !catalog[f.pn]) {
         const next = { ...localCat, [f.pn]: f.model.trim() };
@@ -115,7 +122,7 @@ export default function NyEnhet() {
         try { localStorage.setItem(CAT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
       }
       setAdded((l) => [{ sn: f.sn, model: f.model.trim(), asset: a }, ...l]);
-      setFb({ state: 'success', title: `Sparad som ${a}`, serial: f.sn, detail: `${f.model.trim()} · Tillgänglig · inköpsdatum saknas` });
+      setFb({ state: 'success', title: `Sparad som ${a}`, serial: f.sn, detail: `${f.model.trim()} · ${deviceStatus(st)} · ${f.plats || 'IT-förråd'} · inköpsdatum saknas` });
       setForm({ ...f, sn: '', pn: null, model: '', asset: '' });
       setAssetEdited(false);
     } catch (e) {
@@ -162,7 +169,7 @@ export default function NyEnhet() {
     }
   };
 
-  const places = unique(['IT-förråd', ...devices.map((d) => d.plats)]);
+  const [ownPlace, setOwnPlace] = React.useState(false);
   const models = unique(devices.map((d) => d.modell));
 
   return (
@@ -211,15 +218,32 @@ export default function NyEnhet() {
                 </div>
               </div>
 
-              <div className="row" style={{ gap: 24, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div className="form-grid">
                 <div>
+                  <label className="field-label" htmlFor="f-status">Status</label>
+                  <select id="f-status" className="select" value={form.status || statusDefault} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    {statuses.map((x) => <option key={x} value={x}>{deviceStatus(x) === x ? x : `${deviceStatus(x)} (${x})`}</option>)}
+                  </select>
+                  {['Tilldelad', 'Utlånad – tillfälligt'].includes(deviceStatus(form.status || statusDefault)) && (
+                    <p className="small" style={{ margin: '6px 0 0', color: 'var(--status-amber)' }}>Koppla den till eleven under Tilldelning, annars visas den i Datakvalitet.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="f-plats">Plats</label>
+                  {ownPlace ? (
+                    <TextField id="f-plats" leadingIcon="location_on" value={form.plats} onChange={(e) => setForm({ ...form, plats: e.target.value })}
+                      trailing={<Button variant="text" size="sm" onClick={() => setOwnPlace(false)}>Lista</Button>} />
+                  ) : (
+                    <select id="f-plats" className="select" value={form.plats} onChange={(e) => (e.target.value === '__own' ? (setOwnPlace(true), setForm({ ...form, plats: '' })) : setForm({ ...form, plats: e.target.value }))}>
+                      {places.map((x) => <option key={x} value={x}>{x}</option>)}
+                      <option value="__own">Annan plats…</option>
+                    </select>
+                  )}
+                </div>
+                <div className="full">
                   <span className="field-label">Kategori</span>
                   <SegmentedButton label="Kategori" value={form.kat} onChange={(v) => setForm({ ...form, kat: v })}
-                    options={Object.keys(KATEGORI).map((k) => ({ value: k, label: k }))} />
-                </div>
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <TextField id="f-plats" label="Plats" leadingIcon="location_on" value={form.plats} list="ny-places" onChange={(e) => setForm({ ...form, plats: e.target.value })} />
-                  <datalist id="ny-places">{places.map((m) => <option key={m} value={m} />)}</datalist>
+                    options={kategorier.map((k) => ({ value: k, label: k }))} />
                 </div>
               </div>
 
