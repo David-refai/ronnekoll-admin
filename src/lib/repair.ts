@@ -1,6 +1,6 @@
 'use client';
 
-import { changeDeviceStatus, log } from './actions';
+import { changeDeviceStatus, log, seen } from './actions';
 import { isOpenCase, serialKey, type DeviceView } from './derive';
 import { todayIso } from './format';
 import { REPAIR_FIXED, REPAIR_NOT_FIXED, REPAIR_OUT, storedDeviceStatus, str, type Data, type Row } from './lists';
@@ -118,7 +118,7 @@ export async function sendRepairs(store: Store, items: { device: DeviceView; fau
       Kollinummer: s.kolli, Leverantor: s.lev, Arendenummer: s.arende, Skickad: s.skickad, Status: REPAIR_OUT,
     });
     // The student keeps the assignment while the device is away.
-    await store.update('enheter', device.id, { Status: storedDeviceStatus('Under reparation') });
+    await store.update('enheter', device.id, { Status: storedDeviceStatus('Under reparation'), ...seen(store) });
     if (fault) await setFault(store, fault, { Status: sentStatus }, warnings);
     await log(store, {
       typ: 'Reparation', enhetId: device.serial, elevId: device.holder?.elevId,
@@ -137,6 +137,7 @@ export async function receiveRepair(
   const warnings: string[] = [];
   const d = r.device;
   await store.update('reparationer', r.id, { Status: v.fixed ? REPAIR_FIXED : REPAIR_NOT_FIXED, Mottagen: todayIso(), Atgard: v.atgard });
+  if (d) await store.update('enheter', d.id, seen(store));
 
   if (v.fixed) {
     if (r.fault) await setFault(store, r.fault, { Status: faultChoice(store, ['Klar', 'Löst', 'Åtgärdad', 'Avslutad'], 'Klar'), 'Åtgärd': v.atgard || 'Reparerad av leverantör' }, warnings);

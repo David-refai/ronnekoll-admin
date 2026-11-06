@@ -1,4 +1,5 @@
 import { deviceStatus, str, yes, type Data, type DeviceStatus, type Row } from './lists';
+import { invValue } from './lists';
 
 export interface Holder {
   kind: 'tilldelning' | 'utlaning';
@@ -100,7 +101,7 @@ export function buildDevices(data: Data): DeviceView[] {
       klass: str(e.TillhorKlass) || holder?.klass || '',
       agande: str(e.Agandetyp),
       inkop: str(e['Inköpsdatum']).slice(0, 10),
-      senastInv: str(e.Senastinventerad).slice(0, 10),
+      senastInv: invValue(e).slice(0, 10),
       anteckningar: str(e.Anteckningar),
       holder,
     };

@@ -7,6 +7,7 @@ import {
 } from '@/ds';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
+import { InvColumnBanner } from '@/components/InvColumnBanner';
 import { DeviceForm } from '@/components/enheter/DeviceForm';
 import { DeviceSheet } from '@/components/enheter/DeviceSheet';
 import { StatusDialog } from '@/components/enheter/StatusDialog';
@@ -184,6 +185,7 @@ function EnheterInner() {
         <PageState rows={10} />
       ) : (
         <div className="stack" style={{ gap: 20 }}>
+          <InvColumnBanner />
           <div className="rk-filterbar">
             <div className="rk-filterbar__chips">
               {q && <Chip variant="input" label={`Sök: ${q}`} onRemove={() => { setQ(''); router.replace('/enheter'); }} />}

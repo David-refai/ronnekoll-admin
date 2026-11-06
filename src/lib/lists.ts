@@ -153,3 +153,13 @@ export const SUPPLIERS = ['HP garanti', 'Atea', 'Annan'];
 export const EXT_STATUSES = ['OK', 'Går ut snart', 'Utgången', 'Fel anmält', 'Byte beställt'] as const;
 export type ExtStatus = (typeof EXT_STATUSES)[number];
 export const EXT_REASONS = ['Visaren ej i grönt', 'Plomb eller sprint bruten', 'Skadad', 'Saknas', 'Blockerad / svår att nå', 'Skylt saknas', 'Utgången – behöver bytas'];
+
+/* ---------- Senast inventerad ---------- */
+
+/** The list's column may be called "Senastinventerad", "Senast inventerad", "SenastInventerad"… */
+export const isInvColumn = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f\s_]/g, '').toLowerCase().includes('senastinventerad');
+
+export function invValue(row: Row): string {
+  for (const k of Object.keys(row)) if (isInvColumn(k)) return str(row[k]);
+  return '';
+}

@@ -8,7 +8,8 @@ import {
 import { ScanInput } from '@/components/Scan';
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
-import { changeDeviceStatus, log } from '@/lib/actions';
+import { InvColumnBanner } from '@/components/InvColumnBanner';
+import { changeDeviceStatus, log, seen } from '@/lib/actions';
 import { buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { relDate, todayIso } from '@/lib/format';
@@ -61,6 +62,7 @@ function InventeringInner() {
     <>
       <PageHeader title="Inventering" description="Skanna alla enheter i en klass, ett rum eller hela skolan — appen visar vad som saknas och vad som ligger på fel plats."
         actions={<Button icon="add" disabled={store.readOnly} onClick={() => setCreating(true)}>Ny inventering</Button>} />
+      {ready && <div style={{ marginBottom: 16 }}><InvColumnBanner /></div>}
       {!ready ? <PageState /> : inventories.length ? (
         <DataTable<TRow> columns={columns} rows={inventories} onRowClick={(r) => setActiveId(r._id)} />
       ) : (
@@ -139,7 +141,7 @@ function Session({ inv, devices, rows, onBack }: { inv: TRow; devices: DeviceVie
     try {
       await store.create('inventeringsrader', { Title: d?.serial ?? k, InventeringID: inv._id, EnhetID: d?.serial ?? k, Skannad: new Date().toISOString(), PlatsVidSkanning: plats });
       if (!d) return setFb({ state: 'error', title: 'Okänd enhet', serial: k, detail: 'Finns inte i Enheter — importera den.' });
-      await store.update('enheter', d.id, { Senastinventerad: new Date().toISOString(), ...(d.status === 'Saknas' ? { Status: d.holder ? (d.holder.kind === 'utlaning' ? 'Utlånad' : 'Tilldelad') : 'Tillgänglig' } : {}) });
+      await store.update('enheter', d.id, { ...seen(store), ...(d.status === 'Saknas' ? { Status: d.holder ? (d.holder.kind === 'utlaning' ? 'Utlånad' : 'Tilldelad') : 'Tillgänglig' } : {}) });
       if (!inScope(d, scope)) setFb({ state: 'warning', title: 'Fel plats', serial: d.assetId || d.serial, detail: `Tillhör ${d.klass || d.plats || '—'}${d.holder ? ' · ' + d.holder.namn : ''}` });
       else setFb({ state: 'success', title: 'Hittad', serial: d.assetId || d.serial, detail: d.holder ? `${d.holder.namn} (${d.holder.klass})` : d.modell });
     } catch (e) {
