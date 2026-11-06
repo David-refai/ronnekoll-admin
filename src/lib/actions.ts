@@ -83,6 +83,7 @@ export interface DeviceInput {
   Inköpsdatum: string;
   Agandetyp: string;
   Anteckningar: string;
+  TillhorKlass?: string;
   /** Stored value as in the list's Status choices; defaults to Tillgänglig. */
   Status?: string;
 }

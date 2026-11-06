@@ -2,13 +2,14 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Avatar, Badge, Banner, Button, IconButton, NAV, NavDrawer, SearchBar, Snackbar, TokenStatus } from '@/ds';
+import { Avatar, Badge, Banner, Button, IconButton, NAV, NavDrawer, Snackbar, TokenStatus } from '@/ds';
 import { useStore } from '@/lib/store';
 import { buildDevices, isOpenCase, serialKey } from '@/lib/derive';
 import { buildExtinguishers } from '@/lib/brand';
 import { REPAIR_OUT } from '@/lib/lists';
 import { str } from '@/lib/lists';
 import { TokenButtons } from '@/components/TokenHelp';
+import { GlobalSearch } from '@/components/GlobalSearch';
 
 export const ROUTES: Record<string, string> = {
   oversikt: '/',
@@ -151,8 +152,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="app-menu-btn">
             <IconButton icon="menu" label="Meny" onClick={() => setMobileNav(true)} />
           </span>
-          <div className="rk-topbar__search" ref={searchWrap} data-scan>
-            <SearchBar onSubmit={onSearch} />
+          <div className="rk-topbar__search" ref={searchWrap}>
+            <GlobalSearch onSubmit={onSearch} />
           </div>
           <div className="rk-topbar__actions">
             {tokenPill}

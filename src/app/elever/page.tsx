@@ -55,6 +55,13 @@ function EleverInner() {
   const classes = unique(students.map((s) => s.klass));
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const rows = filtered.slice(page * PAGE, (page + 1) * PAGE);
+  // ?open=<ElevID> from the search in the top bar
+  const openParam = params.get('open');
+  React.useEffect(() => {
+    if (!openParam) return;
+    const s = students.find((x) => x.elevId === openParam || x.namn === openParam);
+    if (s) setOpenId(s.id);
+  }, [openParam, students]);
   const open = openId ? students.find((s) => s.id === openId) : undefined;
   const selectedStudents = students.filter((s) => selected.includes(s.id));
   const withoutCount = students.filter((s) => !s.device).length;

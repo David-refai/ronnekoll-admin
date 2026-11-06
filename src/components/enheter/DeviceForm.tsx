@@ -4,11 +4,12 @@ import * as React from 'react';
 import { Button, SideSheet, TextField } from '@/ds';
 import { createDevice, editDevice, type DeviceInput } from '@/lib/actions';
 import { serialKey, unique, type DeviceView } from '@/lib/derive';
+import { str } from '@/lib/lists';
 import { useStore } from '@/lib/store';
 
 const EMPTY: DeviceInput = {
   AssetID: '', Serienummer: '', ProduktID: 'Chromebook', Kategori: 'Elev', Modell: '', Plats: 'IT-förråd',
-  Inköpsdatum: '', Agandetyp: 'Tilldelad elev', Anteckningar: '',
+  Inköpsdatum: '', Agandetyp: 'Tilldelad elev', Anteckningar: '', TillhorKlass: '',
 };
 
 export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; devices: DeviceView[]; onClose(): void }) {
@@ -18,6 +19,7 @@ export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; 
       ? {
           AssetID: device.assetId, Serienummer: device.serial, ProduktID: device.produkt, Kategori: device.kategori,
           Modell: device.modell, Plats: device.plats, Inköpsdatum: device.inkop, Agandetyp: device.agande, Anteckningar: device.anteckningar,
+          TillhorKlass: str(device.row.TillhorKlass),
         }
       : EMPTY,
   );
@@ -29,7 +31,10 @@ export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; 
   const dupSerial = v.Serienummer && devices.some((d) => d.id !== device?.id && serialKey(d.serial) === serialKey(v.Serienummer));
   const dupAsset = v.AssetID && devices.some((d) => d.id !== device?.id && serialKey(d.assetId) === serialKey(v.AssetID));
   const models = unique(devices.map((d) => d.modell));
-  const places = unique(devices.map((d) => d.plats));
+  const places = unique([...store.choices('enheter', 'Plats', []), ...devices.map((d) => d.plats), v.Plats]);
+  const kategorier = unique([...store.choices('enheter', 'Kategori', ['Elev', 'Lånepool', 'Personal']), v.Kategori]);
+  const klasser = unique([...store.choices('enheter', 'TillhorKlass', []), ...store.data.elever.map((e) => str(e.Klass)), ...devices.map((d) => str(d.row.TillhorKlass)), v.TillhorKlass ?? '']);
+  const holderKlass = device?.holder?.klass;
 
   const save = async () => {
     setError(null);
@@ -44,6 +49,7 @@ export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; 
             const before: Record<string, string> = {
               AssetID: device.assetId, Serienummer: device.serial, ProduktID: device.produkt, Kategori: device.kategori, Modell: device.modell,
               Plats: device.plats, Inköpsdatum: device.inkop, Agandetyp: device.agande, Anteckningar: device.anteckningar,
+              TillhorKlass: str(device.row.TillhorKlass),
             };
             return before[k] !== val;
           }),
@@ -90,7 +96,7 @@ export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; 
         <div>
           <label className="field-label" htmlFor="f-kat">Kategori</label>
           <select id="f-kat" className="select" value={v.Kategori} onChange={set('Kategori')}>
-            {['Elev', 'Lånepool', 'Personal'].map((x) => <option key={x}>{x}</option>)}
+            {kategorier.map((x) => <option key={x}>{x}</option>)}
           </select>
         </div>
         <div>
@@ -99,8 +105,22 @@ export function DeviceForm({ device, devices, onClose }: { device?: DeviceView; 
             {unique(['Tilldelad elev', 'Skolans lånepool', 'Personal', v.Agandetyp]).map((x) => <option key={x}>{x}</option>)}
           </select>
         </div>
-        <TextField label="Plats" value={v.Plats} onChange={set('Plats')} list="rk-places" />
-        <datalist id="rk-places">{places.map((m) => <option key={m} value={m} />)}</datalist>
+        <div>
+          <label className="field-label" htmlFor="f-klass">Tillhör klass</label>
+          <select id="f-klass" className="select" value={v.TillhorKlass ?? ''} onChange={set('TillhorKlass')}>
+            <option value="">— Ingen klass —</option>
+            {klasser.filter(Boolean).sort((a, b) => a.localeCompare(b, 'sv', { numeric: true })).map((x) => <option key={x}>{x}</option>)}
+          </select>
+          {holderKlass && holderKlass !== (v.TillhorKlass ?? '') && (
+            <p className="small muted" style={{ margin: '6px 0 0' }}>Eleven {device?.holder?.namn} går i {holderKlass}.</p>
+          )}
+        </div>
+        <div>
+          <label className="field-label" htmlFor="f-plats">Plats</label>
+          <select id="f-plats" className="select" value={v.Plats} onChange={set('Plats')}>
+            {places.filter(Boolean).map((x) => <option key={x}>{x}</option>)}
+          </select>
+        </div>
         <TextField label="Inköpsdatum" type="date" value={v.Inköpsdatum} onChange={set('Inköpsdatum')} />
         <TextField className="full" label="Anteckningar" multiline rows={3} value={v.Anteckningar} onChange={set("Anteckningar")} />
       </div>
