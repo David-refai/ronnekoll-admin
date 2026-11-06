@@ -68,10 +68,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => setMobileNav(false), [path]);
   const searchWrap = React.useRef<HTMLDivElement>(null);
 
-  // Scan-first screens use the collapsed rail for more room
+  // The rail stays the way you left it (remembered on this computer) — no auto-collapse on scan pages.
   React.useEffect(() => {
-    setCollapsed(['/inventering', '/tilldelning', '/aterlamning'].some((p) => path.startsWith(p)));
-  }, [path]);
+    try { setCollapsed(localStorage.getItem('rk.navCollapsed') === '1'); } catch { /* ignore */ }
+  }, []);
+  const toggleNav = () => setCollapsed((c) => {
+    try { localStorage.setItem('rk.navCollapsed', c ? '0' : '1'); } catch { /* ignore */ }
+    return !c;
+  });
 
   // Ctrl/Cmd + K focuses the scan/search field
   React.useEffect(() => {
@@ -133,6 +137,32 @@ export function Shell({ children }: { children: React.ReactNode }) {
       />
     );
 
+  // Warn before the token runs out: once at 15 min, again at 3 min, and when it has expired.
+  const warned = React.useRef<{ soon?: boolean; last?: boolean; gone?: boolean }>({});
+  React.useEffect(() => {
+    if (store.mode !== 'live' || !store.loadedAt) return;
+    const w = warned.current;
+    if (ts.state === 'valid') { warned.current = {}; return; }
+    if (ts.state === 'expiring' && (ts.minutes ?? 0) >= 3 && !w.soon) {
+      w.soon = true;
+      store.toast({ icon: 'timer', message: `Token går ut om ${ts.minutes} min — klistra in en ny innan, annars kan du inte spara.` });
+    } else if (ts.state === 'expiring' && (ts.minutes ?? 0) < 3 && !w.last) {
+      w.last = w.soon = true;
+      store.toast({ icon: 'timer', message: `Token går ut om ${Math.max(1, ts.minutes ?? 1)} min!` });
+      try { navigator.vibrate?.([80, 60, 80]); } catch { /* ignore */ }
+    } else if ((ts.state === 'expired' || ts.state === 'none') && !w.gone) {
+      w.gone = w.last = w.soon = true;
+      store.toast({ icon: 'key_off', message: 'Token har gått ut — inget sparas förrän du klistrar in en ny.' });
+    }
+  }, [ts.state, ts.minutes, store.mode, store.loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The browser tab shows it too, so you notice even in another tab.
+  React.useEffect(() => {
+    const base = document.title.replace(/^⚠ [^·]*· /, '');
+    const live = store.mode === 'live' && !!store.loadedAt;
+    document.title = live && ts.state === 'expiring' ? `⚠ Token ${ts.minutes} min · ${base}` : live && ts.state === 'expired' ? `⚠ Token slut · ${base}` : base;
+  }, [ts.state, ts.minutes, store.mode, store.loadedAt, path]);
+
   // Before the first load the page itself asks for a token; the banner is for when it runs out mid-work.
   const showTokenBanner = store.mode === 'live' && !!store.loadedAt && (ts.state === 'expired' || ts.state === 'none') && path !== '/installningar';
 
@@ -143,7 +173,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           groups={groups}
           active={activeId(path)}
           collapsed={collapsed}
-          onToggle={() => setCollapsed((c) => !c)}
+          onToggle={toggleNav}
           onSelect={(id) => router.push(ROUTES[id] ?? '/')}
         />
       </div>
@@ -162,6 +192,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Avatar name={store.userName} />
           </div>
         </header>
+        {store.mode === 'live' && !!store.loadedAt && ts.state === 'expiring' && path !== '/installningar' && (
+          <Banner tone="warning" title={`Token går ut om ${ts.minutes} min`} action={<TokenButtons compact />}>
+            Hämta en ny token i Graph Explorer och klistra in den nu, så kan du fortsätta spara utan avbrott.
+          </Banner>
+        )}
         {showTokenBanner && (
           <Banner
             tone="error"

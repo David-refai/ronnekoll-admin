@@ -80,6 +80,6 @@ export function tokenState(info: TokenInfo | null, now = Date.now()): { state: T
   if (!info.expiresAt) return { state: 'valid' };
   const minutes = Math.floor((info.expiresAt - now) / 60000);
   if (minutes < 0) return { state: 'expired', minutes: 0 };
-  if (minutes < 10) return { state: 'expiring', minutes };
+  if (minutes < 15) return { state: 'expiring', minutes };
   return { state: 'valid', minutes };
 }

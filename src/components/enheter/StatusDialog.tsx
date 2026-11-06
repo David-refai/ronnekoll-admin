@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { Button, Dialog, StatusBadge, TextField } from '@/ds';
+import { Banner, Button, Dialog, StatusBadge, TextField } from '@/ds';
+import { useRouter } from 'next/navigation';
 import { changeDeviceStatus, type Decision } from '@/lib/actions';
-import { serialKey, type DeviceView } from '@/lib/derive';
-import { DEVICE_STATUSES, DISCONNECTING, type DeviceStatus } from '@/lib/lists';
+import { serialKey, statusRule, type DeviceView } from '@/lib/derive';
+import { DEVICE_STATUSES, type DeviceStatus } from '@/lib/lists';
 import { useStore } from '@/lib/store';
 
 /**
@@ -29,8 +30,11 @@ export function StatusDialog({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const router = useRouter();
   const h = device.holder;
-  const needsDecision = !!h && DISCONNECTING.includes(next);
+  const rule = statusRule(device, next);
+  const needsDecision = rule.kind === 'decision';
+  const blocked = rule.kind === 'block';
   const canSwap = h?.kind === 'tilldelning';
   const effectiveDecision: Decision = canSwap ? decision : 'aterlamna';
 
@@ -71,13 +75,13 @@ export function StatusDialog({
     <Dialog
       open
       onClose={onClose}
-      tone={needsDecision ? 'warning' : 'default'}
+      tone={needsDecision || blocked ? 'warning' : 'default'}
       icon="swap_horiz"
       title={needsDecision ? `${device.assetId || device.serial} är ${h?.kind === 'utlaning' ? 'utlånad till' : 'tilldelad'} ${h?.namn} (${h?.klass})` : `Ändra status för ${device.assetId || device.serial}`}
       actions={
         <>
           <Button variant="text" onClick={onClose}>Avbryt</Button>
-          <Button icon={needsDecision ? (effectiveDecision === 'byt' ? 'swap_horiz' : 'assignment_return') : 'check'} disabled={busy || next === device.status || store.readOnly} onClick={submit}>
+          <Button icon={needsDecision ? (effectiveDecision === 'byt' ? 'swap_horiz' : 'assignment_return') : 'check'} disabled={busy || next === device.status || blocked || store.readOnly} onClick={submit}>
             {needsDecision ? (effectiveDecision === 'byt' ? 'Byt enhet och spara' : 'Återlämna och spara') : 'Spara'}
           </Button>
         </>
@@ -87,15 +91,26 @@ export function StatusDialog({
         <label className="field-label" htmlFor="rk-status">Ny status</label>
         <select id="rk-status" className="select" value={next} onChange={(e) => setNext(e.target.value as DeviceStatus)}>
           {DEVICE_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}{s === device.status ? ' (nuvarande)' : ''}</option>
+            <option key={s} value={s}>{s}{s === device.status ? ' (nuvarande)' : ''}{s !== device.status && statusRule(device, s).kind === 'block' ? ' — går inte här' : ''}</option>
           ))}
         </select>
       </div>
 
+      {h && !needsDecision && !blocked && next === device.status && (
+        <span className="small muted">{h.kind === 'utlaning' ? 'Tillfälligt utlånad till' : 'Tilldelad'} {h.namn} ({h.klass}). Byter du till Tillgänglig, Trasig, Under reparation eller Kasserad frågar appen vad som ska hända med {h.kind === 'utlaning' ? 'lånet' : 'tilldelningen'}.</span>
+      )}
+      {rule.kind === 'block' && (
+        <Banner tone="warning" icon="block" title={`Kan inte sätta ${next} här`}
+          action={rule.link ? <Button variant="outlined" size="sm" onClick={() => { onClose(); router.push(rule.link!.href); }}>{rule.link.label}</Button> : undefined}>
+          {rule.message}
+        </Banner>
+      )}
+      {rule.kind === 'warn' && <Banner tone="warning" icon="warning" title="Observera">{rule.message}</Banner>}
+
       {needsDecision && (
         <>
           <span>
-            Du ändrar status från <b>{device.status}</b> till <b>{next}</b>. En {next.toLowerCase()} enhet kan inte vara {h?.kind === 'utlaning' ? 'utlånad' : 'tilldelad'} — vad ska hända?
+            Du ändrar status från <b>{device.status}</b> till <b>{next}</b>. {next === 'Tillgänglig' ? 'En tillgänglig enhet' : `En ${next.toLowerCase()} enhet`} kan inte samtidigt vara {h?.kind === 'utlaning' ? 'utlånad' : 'tilldelad'} — vad ska hända?
           </span>
           {canSwap && (
             <Dialog.Option icon="swap_horiz" title="Byt enhet" description={`${h?.namn} får en tillgänglig enhet i samma tilldelning`} selected={effectiveDecision === 'byt'} onClick={() => setDecision('byt')} />

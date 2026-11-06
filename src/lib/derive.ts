@@ -207,3 +207,37 @@ export function searchStudents(list: StudentView[], q: string) {
   if (!n) return list;
   return list.filter((s) => [s.namn, s.elevId, s.epost, s.klass].join(' ').toLowerCase().includes(n));
 }
+
+/* ---------- Status change rules ---------- */
+
+export type StatusRule =
+  | { kind: 'ok' }
+  | { kind: 'warn'; message: string }
+  | { kind: 'decision' }
+  | { kind: 'block'; message: string; link?: { label: string; href: string } };
+
+/**
+ * Is it OK to set this status by hand? Tilldelad / Utlånad follow the assignment and loan lists,
+ * so they can't just be typed in — and a lent or assigned device can't silently become something else.
+ */
+export function statusRule(d: DeviceView, next: DeviceStatus): StatusRule {
+  if (next === d.status) return { kind: 'ok' };
+  const h = d.holder;
+  const enc = encodeURIComponent(d.serial);
+  if (!h) {
+    if (next === 'Tilldelad')
+      return { kind: 'block', message: 'Tilldelad sätts när du tilldelar enheten till en elev — då skrivs också tilldelningen och avtalet.', link: { label: 'Tilldela enheten', href: `/tilldelning?enhet=${enc}` } };
+    if (next === 'Utlånad – tillfälligt')
+      return { kind: 'block', message: 'Utlånad sätts när du lånar ut enheten till en elev — då registreras lånet med datum.', link: { label: 'Låna ut enheten', href: `/utlaning?enhet=${enc}` } };
+    return { kind: 'ok' };
+  }
+  const lent = h.kind === 'utlaning';
+  const who = `${h.namn} (${h.klass})`;
+  if (next === 'Saknas') return { kind: 'warn', message: `${lent ? 'Lånet' : 'Tilldelningen'} till ${who} ligger kvar — återlämna den om enheten inte kommer tillbaka.` };
+  if (lent && next === 'Tilldelad')
+    return { kind: 'block', message: `Enheten är tillfälligt utlånad till ${who}. Återlämna lånet först och tilldela den sedan under Tilldelning.`, link: { label: 'Gå till Tillfällig utlåning', href: '/utlaning' } };
+  if (!lent && next === 'Utlånad – tillfälligt')
+    return { kind: 'block', message: `Enheten är tilldelad ${who}. Återlämna den först om den ska lånas ut till någon annan.`, link: { label: 'Gå till Återlämning', href: `/aterlamning?enhet=${enc}` } };
+  // Tillgänglig, Trasig, Under reparation, Kasserad: the loan/assignment must end (or the device be swapped).
+  return { kind: 'decision' };
+}

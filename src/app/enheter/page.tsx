@@ -14,10 +14,10 @@ import { StatusDialog } from '@/components/enheter/StatusDialog';
 import { SwapDialog } from '@/components/enheter/SwapDialog';
 import { ConfirmDelete } from '@/components/ConfirmDelete';
 import { changeDeviceStatus, deleteRow, log } from '@/lib/actions';
-import { buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
+import { statusRule, buildDevices, serialKey, unique, type DeviceView } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { daysSince, shortDate } from '@/lib/format';
-import { DEVICE_STATUSES, DISCONNECTING, type DeviceStatus } from '@/lib/lists';
+import { DEVICE_STATUSES, type DeviceStatus } from '@/lib/lists';
 import { warranty } from '@/lib/repair';
 import { useStore } from '@/lib/store';
 
@@ -295,8 +295,8 @@ function BulkDialog({ kind, devices, onClose }: { kind: 'status' | 'plats' | 'ka
   const [plats, setPlats] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const target: DeviceStatus = kind === 'kassera' ? 'Kasserad' : status;
-  // Assigned devices would need a per-device decision — skip them in bulk.
-  const blocked = kind !== 'plats' ? devices.filter((d) => d.holder && DISCONNECTING.includes(target)) : [];
+  // Lent/assigned devices need a per-device decision, and Tilldelad/Utlånad can't be typed in — skip them in bulk.
+  const blocked = kind !== 'plats' ? devices.filter((d) => ['decision', 'block'].includes(statusRule(d, target).kind)) : [];
   const ok = devices.filter((d) => !blocked.includes(d));
 
   const run = async () => {
@@ -351,7 +351,7 @@ function BulkDialog({ kind, devices, onClose }: { kind: 'status' | 'plats' | 'ka
       {kind === 'kassera' && <span>Enheterna får status Kasserad. Historiken finns kvar och kan ångras genom att ändra status igen.</span>}
       {blocked.length > 0 && (
         <span className="small" style={{ color: 'var(--status-amber)', fontWeight: 600 }}>
-          {blocked.length} av enheterna är tilldelade eller utlånade och hoppas över — öppna dem en i taget för att välja Byt enhet eller Återlämna.
+          {blocked.length} av enheterna hoppas över: utlånade eller tilldelade enheter öppnar du en i taget (appen frågar om lånet/tilldelningen), och Tilldelad/Utlånad sätts bara via Tilldelning eller Tillfällig utlåning.
         </span>
       )}
     </Dialog>

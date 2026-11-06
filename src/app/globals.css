@@ -11,8 +11,9 @@ a { color: var(--primary); }
 .app-topbar { position: sticky; top: 0; z-index: 20; }
 .app-menu-btn { display: none; }
 .app-demo { padding: 0 32px; }
-.app-mobile-nav { justify-content: flex-start; align-items: stretch; padding: 0; }
-.app-mobile-nav .rk-nav { height: 100vh; border-radius: 0 16px 16px 0; }
+.rk-scrim.app-mobile-nav { justify-content: flex-start !important; align-items: stretch !important; padding: 0 !important; }
+.app-mobile-nav .rk-nav { height: 100vh; height: 100dvh; max-height: 100dvh; width: min(var(--drawer-width), 86vw); border-radius: 0 16px 16px 0; overflow-y: auto; overscroll-behavior: contain;
+  padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
 .app-toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 100; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
