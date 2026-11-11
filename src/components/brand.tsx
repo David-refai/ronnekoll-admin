@@ -235,12 +235,12 @@ export function ExtQrLabel({ ext }: { ext: ExtView }) {
     // Code128 too, for USB scanners that only read line barcodes.
     if (bar.current) {
       try {
-        JsBarcode(bar.current, ext.nr, { format: 'CODE128', displayValue: false, margin: 0, height: 40, width: 1.6, background: '#ffffff', lineColor: '#000000' });
+        JsBarcode(bar.current, ext.nr, { format: 'CODE128', displayValue: false, margin: 10, marginTop: 0, marginBottom: 0, height: 40, width: 1.6, background: '#ffffff', lineColor: '#000000' });
       } catch { /* empty number */ }
     }
   }, [ext.nr]);
   return (
-    <div className="label" style={{ width: '70mm', height: '36mm' }}>
+    <div className="label" style={{ width: '70mm', height: '36mm', padding: '1.5mm 4mm' }}>
       {src && <img src={src} alt="" style={{ width: '24mm', height: '24mm', flexShrink: 0 }} />}
       <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: '2.2mm', fontWeight: 700, letterSpacing: '0.05em' }}>BRANDSLÄCKARE</div>

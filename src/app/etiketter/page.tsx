@@ -31,7 +31,8 @@ function Barcode({ value, height }: { value: string; height: number }) {
   React.useEffect(() => {
     if (!ref.current) return;
     try {
-      JsBarcode(ref.current, value, { format: 'CODE128', displayValue: false, margin: 0, height: 40, width: 1.4, background: '#ffffff', lineColor: '#000000' });
+      // margin 10 = the quiet zone (10 modules of white) scanners need on both sides.
+      JsBarcode(ref.current, value, { format: 'CODE128', displayValue: false, margin: 10, marginTop: 0, marginBottom: 0, height: 40, width: 2, background: '#ffffff', lineColor: '#000000' });
       ref.current.setAttribute('preserveAspectRatio', 'none');
     } catch { /* invalid value */ }
   }, [value]);
@@ -46,25 +47,39 @@ function Qr({ value, size }: { value: string; size: number }) {
   return src ? <img src={src} alt="" style={{ width: `${size}mm`, height: `${size}mm`, flexShrink: 0 }} /> : null;
 }
 
-/** One physical label, sized in millimetres. Black on white in every theme. */
+/**
+ * One physical label, sized in millimetres. Black on white in every theme.
+ * QR + text on top, the barcode across the whole width below it — wide bars read better with USB scanners,
+ * and 4 mm side margins keep it clear of the printer's unprintable edge (the right column on A4).
+ */
 function Label({ d, t, f }: { d: DeviceView; t: Template; f: Fields }) {
   const T = TEMPLATES[t];
   const small = t === '54x17';
-  const qrSize = T.h - 6;
+  const side = t === 'a4-3x8' ? 4 : 2;
+  if (small) {
+    return (
+      <div className="label" style={{ width: `${T.w}mm`, height: `${T.h}mm`, flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center', gap: '0.5mm', padding: `1mm ${side}mm` }}>
+        {f.assetId && <div style={{ fontWeight: 800, fontSize: '3.2mm', lineHeight: 1.05 }}>{d.assetId || d.serial}</div>}
+        {f.barcode && <Barcode value={d.serial} height={6} />}
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2.2mm', letterSpacing: '0.04em' }}>{d.serial}</div>
+      </div>
+    );
+  }
+  const qrSize = f.barcode ? Math.min(17, T.h - 17) : T.h - 6;
   return (
-    <div className="label" style={{ width: `${T.w}mm`, height: `${T.h}mm` }}>
-      {f.qr && !small && <Qr value={d.serial} size={qrSize} />}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-        <div>
-          {f.assetId && <div style={{ fontWeight: 800, fontSize: small ? '3.2mm' : '4.4mm', lineHeight: 1.05 }}>{d.assetId || d.serial}</div>}
-          {f.modell && !small && <div style={{ fontSize: '2.4mm', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.modell}</div>}
-          {f.elev && d.holder && !small && <div style={{ fontSize: '2.4mm', lineHeight: 1.2 }}>{d.holder.namn} · {d.holder.klass}</div>}
+    <div className="label" style={{ width: `${T.w}mm`, height: `${T.h}mm`, flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between', gap: '1mm', padding: `1.8mm ${side}mm 1.5mm` }}>
+      <div style={{ display: 'flex', gap: '2.5mm', alignItems: 'center', minHeight: 0 }}>
+        {f.qr && <Qr value={d.serial} size={qrSize} />}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {f.assetId && <div style={{ fontWeight: 800, fontSize: '4.6mm', lineHeight: 1.05 }}>{d.assetId || d.serial}</div>}
+          {f.modell && <div style={{ fontSize: '2.3mm', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.modell}</div>}
+          {f.elev && d.holder && <div style={{ fontSize: '2.3mm', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.holder.namn} · {d.holder.klass}</div>}
+          {f.skola && <div style={{ fontSize: '1.9mm', lineHeight: 1.2, marginTop: '0.4mm' }}>Rönnenskolan – Malmö stad</div>}
         </div>
-        <div>
-          {f.barcode && <Barcode value={d.serial} height={small ? 6 : 7} />}
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: small ? '2.2mm' : '2.5mm', letterSpacing: '0.04em' }}>{d.serial}</div>
-          {f.skola && !small && <div style={{ fontSize: '2mm', lineHeight: 1.2 }}>Rönnenskolan – Malmö stad</div>}
-        </div>
+      </div>
+      <div>
+        {f.barcode && <Barcode value={d.serial} height={8} />}
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '2.5mm', letterSpacing: '0.06em', textAlign: f.barcode ? 'center' : 'left' }}>{d.serial}</div>
       </div>
     </div>
   );
