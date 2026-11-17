@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Button, Dialog, IconButton, SearchBar, type SearchBarProps } from '@/ds';
 import { Portal } from '@/components/Portal';
 import { BASE_PATH } from '@/components/Pwa';
+import { cleanScan } from '@/lib/scan';
 
 /** Pulls the serial out of label text read by OCR ("SN# CND6110J8J", "S/N: 5CD…"). */
 export function serialFromText(text: string): string | null {
@@ -196,10 +197,10 @@ export function ScanInput(props: SearchBarProps & { onScan(text: string): void; 
   return (
     <div className="row" style={{ gap: 8, alignItems: 'center' }} data-scan>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <SearchBar {...rest} onSubmit={onScan} />
+        <SearchBar {...rest} onSubmit={(t) => onScan(cleanScan(t))} />
       </div>
       <IconButton icon="photo_camera" variant="tonal" label="Skanna med kameran" onClick={() => setCam(true)} disabled={rest.disabled} />
-      {cam && <CameraScanner ocr={ocr} onClose={() => setCam(false)} onResult={(t) => { setCam(false); onScan(t); }} />}
+      {cam && <CameraScanner ocr={ocr} onClose={() => setCam(false)} onResult={(t) => { setCam(false); onScan(cleanScan(t)); }} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Button, DataTable, EmptyState, IconButton, KpiCard, PageHeader, Segment
 import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
 import { ProvisionLists } from '@/components/ProvisionLists';
+import { ListColumnsCheck } from '@/components/ListColumnsCheck';
 import { buildDevices, unique } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { shortDate } from '@/lib/format';
@@ -98,6 +99,7 @@ export default function Reparationer() {
       {!ready ? <PageState /> : (
         <div className="stack" style={{ gap: 20 }}>
           <ProvisionLists keys={['reparationer']} />
+          <ListColumnsCheck list="reparationer" />
           <div className="grid-4">
             <KpiCard label="Ute på reparation" value={out.length} icon="local_shipping" tone="orange" onClick={() => setTab('ute')} />
             <KpiCard label={`Borta mer än ${LATE_DAYS} dagar`} value={out.filter((r) => r.late).length} icon="schedule" tone="red" onClick={() => setTab('ute')} />

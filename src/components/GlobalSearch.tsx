@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Icon, IconButton, StatusBadge } from '@/ds';
 import { CameraScanner } from '@/components/Scan';
 import { buildDevices, buildStudents, serialKey } from '@/lib/derive';
+import { cleanScan } from '@/lib/scan';
 import { useStore } from '@/lib/store';
 
 /** Top-bar search: results while you type (enheter + elever), Enter/scan opens the match, camera button. */
@@ -51,7 +52,7 @@ export function GlobalSearch({ onSubmit }: { onSubmit(q: string): void }) {
   const done = () => { setQ(''); setOpen(false); };
   const submit = (text = q) => {
     if (open && hits[active] && text === q && !/^[A-Z0-9,#\s-]{8,}$/i.test(text.trim())) hits[active].go();
-    else onSubmit(text);
+    else onSubmit(cleanScan(text));
     done();
   };
 
@@ -85,7 +86,7 @@ export function GlobalSearch({ onSubmit }: { onSubmit(q: string): void }) {
           )) : <div className="small muted" style={{ padding: 12 }}>Inget hittades för ”{q.trim()}”.</div>}
         </div>
       )}
-      {cam && <CameraScanner onClose={() => setCam(false)} onResult={(t) => { setCam(false); onSubmit(t); }} />}
+      {cam && <CameraScanner onClose={() => setCam(false)} onResult={(t) => { setCam(false); onSubmit(cleanScan(t)); }} />}
     </div>
   );
 }

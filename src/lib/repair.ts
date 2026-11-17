@@ -3,6 +3,7 @@
 import { changeDeviceStatus, log, seen } from './actions';
 import { isOpenCase, serialKey, type DeviceView } from './derive';
 import { todayIso } from './format';
+import { kolliKey } from './scan';
 import { REPAIR_FIXED, REPAIR_NOT_FIXED, REPAIR_OUT, storedDeviceStatus, str, type Data, type Row } from './lists';
 import type { useStore } from './store';
 
@@ -64,18 +65,22 @@ const daysBetween = (a: string, b: string) => Math.max(0, Math.round((new Date(b
 export function buildRepairs(data: Data, devices: DeviceView[]): RepairView[] {
   const bySerial = new Map(devices.map((d) => [serialKey(d.serial), d]));
   const faults = new Map(data.felanmalningar.map((f) => [f._id, f]));
+  const byAsset = new Map(devices.filter((d) => d.assetId).map((d) => [serialKey(d.assetId), d]));
   const today = todayIso();
   return data.reparationer.map((r) => {
-    const serial = str(r.EnhetID);
-    const device = bySerial.get(serialKey(serial));
+    const fault = faults.get(str(r.FelanmalanID));
+    // EnhetID first; else the fault's device; else the AssetID/serial at the start of the Title ("RÖGR420 · 2026-10-09").
+    const fromTitle = str(r.Title).split('·')[0].trim();
+    const device = bySerial.get(serialKey(r.EnhetID)) ?? bySerial.get(serialKey(fault?.EnhetID)) ?? bySerial.get(serialKey(fromTitle)) ?? byAsset.get(serialKey(fromTitle));
+    const serial = device?.serial || str(r.EnhetID) || str(fault?.EnhetID) || fromTitle;
     const skickad = str(r.Skickad).slice(0, 10) || r._created.slice(0, 10);
     const mottagen = str(r.Mottagen).slice(0, 10);
     const status = str(r.Status) || REPAIR_OUT;
     const out = status === REPAIR_OUT;
     const days = daysBetween(skickad, out ? today : mottagen || today);
     return {
-      id: r._id, row: r, serial, device, fault: faults.get(str(r.FelanmalanID)),
-      kolli: str(r.Kollinummer), lev: str(r.Leverantor), arende: str(r.Arendenummer), skickad, mottagen, status, atgard: str(r.Atgard),
+      id: r._id, row: r, serial, device, fault,
+      kolli: kolliKey(r.Kollinummer), lev: str(r.Leverantor), arende: str(r.Arendenummer), skickad, mottagen, status, atgard: str(r.Atgard),
       out, days, late: out && days > LATE_DAYS, warranty: warranty(device?.inkop ?? ''),
     };
   });
@@ -115,7 +120,7 @@ export async function sendRepairs(store: Store, items: { device: DeviceView; fau
   for (const { device, fault } of items) {
     await store.create('reparationer', {
       Title: `${device.assetId || device.serial} · ${s.skickad}`, EnhetID: device.serial, FelanmalanID: fault?._id ?? '',
-      Kollinummer: s.kolli, Leverantor: s.lev, Arendenummer: s.arende, Skickad: s.skickad, Status: REPAIR_OUT,
+      Kollinummer: kolliKey(s.kolli), Leverantor: s.lev, Arendenummer: s.arende, Skickad: s.skickad, Status: REPAIR_OUT,
     });
     // The student keeps the assignment while the device is away.
     await store.update('enheter', device.id, { Status: storedDeviceStatus('Under reparation'), ...seen(store) });

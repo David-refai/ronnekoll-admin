@@ -11,6 +11,7 @@ import { buildDevices, serialKey } from '@/lib/derive';
 import { shortDate } from '@/lib/format';
 import { str } from '@/lib/lists';
 import { buildRepairs, receiveRepair, type NextStep, type RepairView } from '@/lib/repair';
+import { kolliKey } from '@/lib/scan';
 import { useStore } from '@/lib/store';
 
 const kv = (label: string, value: React.ReactNode, span = false, mono = false) => (
@@ -57,12 +58,12 @@ function TaEmotInner() {
     const k = serialKey(raw);
     if (!k) return;
     const byDevice = out.filter((r) => serialKey(r.serial) === k || (r.device && serialKey(r.device.assetId) === k));
-    const byKolli = out.filter((r) => serialKey(r.kolli) === k);
+    const byKolli = out.filter((r) => r.kolli && r.kolli === kolliKey(raw));
     const hits = byDevice.length ? byDevice : byKolli;
     if (!hits.length) {
       setSelId(null);
       setMatches([]);
-      const done = repairs.find((r) => serialKey(r.serial) === k || serialKey(r.kolli) === k);
+      const done = repairs.find((r) => serialKey(r.serial) === k || (!!r.kolli && r.kolli === kolliKey(raw)));
       setMiss(done ? `${raw.trim()} är redan mottagen (${shortDate(done.mottagen)})` : `${raw.trim()} har inget öppet utskick`);
       return;
     }

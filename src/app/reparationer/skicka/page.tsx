@@ -10,8 +10,10 @@ import { buildDevices, isOpenCase, serialKey, type DeviceView } from '@/lib/deri
 import { todayIso } from '@/lib/format';
 import { REPAIR_OUT, SUPPLIERS, str, type Row } from '@/lib/lists';
 import { openFault, sendRepairs, warranty } from '@/lib/repair';
+import { kolliKey } from '@/lib/scan';
 import { useStore } from '@/lib/store';
 
+const DRAFT = 'rk.repairDraft';
 const dot = (n: number) => <span className="rk-step__dot" style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}>{n}</span>;
 
 function SkickaInner() {
@@ -37,15 +39,43 @@ function SkickaInner() {
   const [busy, setBusy] = React.useState(false);
   const [warnings, setWarnings] = React.useState<string[]>([]);
 
-  // ?enhet=… from the device sheet
+  // The parcel you are packing is kept on this computer until you register it — leaving the page loses nothing.
+  const [restored, setRestored] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT) || 'null');
+      if (d) {
+        if (Array.isArray(d.picked)) setPicked(d.picked);
+        if (d.kolli) setKolli(d.kolli);
+        if (d.lev) setLev(d.lev);
+        if (d.annan) setAnnan(d.annan);
+        if (d.arende) setArende(d.arende);
+        if (d.skickad) setSkickad(d.skickad);
+      }
+    } catch { /* ignore */ }
+    setRestored(true);
+  }, []);
+  React.useEffect(() => {
+    if (!restored) return;
+    try {
+      if (picked.length || kolli || arende) localStorage.setItem(DRAFT, JSON.stringify({ picked, kolli, lev, annan, arende, skickad }));
+      else localStorage.removeItem(DRAFT);
+    } catch { /* ignore */ }
+  }, [restored, picked, kolli, lev, annan, arende, skickad]);
+  const clearDraft = () => {
+    try { localStorage.removeItem(DRAFT); } catch { /* ignore */ }
+    setPicked([]); setKolli(''); setArende(''); setAnnan(''); setSkickad(todayIso());
+  };
+
+  // ?enhet=… from the device sheet: added to the parcel (keeps what was already in it)
   const pre = params.get('enhet');
   React.useEffect(() => {
-    if (pre && devices.length && !picked.length) {
+    if (restored && pre && devices.length) {
       const d = find(pre);
-      if (d) setPicked([d.serial]);
+      if (d) setPicked((p) => (p.includes(d.serial) ? p : [...p, d.serial]));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pre, devices.length]);
+  }, [restored, pre, devices.length]);
 
   const outSerials = React.useMemo(
     () => new Set(store.data.reparationer.filter((r) => (str(r.Status) || REPAIR_OUT) === REPAIR_OUT).map((r) => serialKey(r.EnhetID))),
@@ -82,7 +112,8 @@ function SkickaInner() {
   const run = async () => {
     setBusy(true);
     try {
-      const w = await sendRepairs(store, inBox.map((d) => ({ device: d, fault: openFault(store.data, d.serial) })), { kolli: kolli.trim(), lev: supplier, arende: arende.trim(), skickad });
+      const w = await sendRepairs(store, inBox.map((d) => ({ device: d, fault: openFault(store.data, d.serial) })), { kolli: kolliKey(kolli), lev: supplier, arende: arende.trim(), skickad });
+      try { localStorage.removeItem(DRAFT); } catch { /* ignore */ }
       store.toast({ icon: 'local_shipping', message: `${inBox.length} ${inBox.length === 1 ? 'enhet' : 'enheter'} skickade till ${supplier}` });
       if (w.length) {
         setWarnings(w);
@@ -159,10 +190,11 @@ function SkickaInner() {
                 {dot(2)}
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Försändelse</h2>
               </div>
-              <div data-scan><TextField label="Kollinummer *" mono leadingIcon="barcode_scanner" value={kolli} onChange={(e) => setKolli(e.target.value)}
+              <div data-scan><TextField label="Kollinummer *" mono leadingIcon="barcode_scanner" value={kolli} onChange={(e) => setKolli(e.target.value)} onBlur={() => setKolli((k) => kolliKey(k))}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setKolli((k) => kolliKey(k)); } }}
                 helper="Skanna streckkoden på fraktsedeln"
                 trailing={<IconButton icon="photo_camera" label="Skanna med kameran" onClick={() => setKolliCam(true)} />} /></div>
-              {kolliCam && <CameraScanner onClose={() => setKolliCam(false)} onResult={(t) => { setKolliCam(false); setKolli(t.trim()); }} />}
+              {kolliCam && <CameraScanner onClose={() => setKolliCam(false)} onResult={(t) => { setKolliCam(false); setKolli(kolliKey(t)); }} />}
               <div>
                 <span className="field-label">Leverantör</span>
                 <SegmentedButton label="Leverantör" value={lev} onChange={setLev} options={SUPPLIERS.map((s) => ({ value: s, label: s }))} />
@@ -177,7 +209,8 @@ function SkickaInner() {
                 <span>Enheterna får status <b>Under reparation</b> och felanmälningarna flyttas till <b>Skickad på reparation</b>. Eleverna behåller sin tilldelning.</span>
               </div>
               <div className="row" style={{ justifyContent: 'flex-end', gap: 8, marginTop: 'auto' }}>
-                <Button variant="text" onClick={() => router.push('/reparationer')}>Avbryt</Button>
+                {(picked.length > 0 || kolli) && <Button variant="text" icon="delete_sweep" onClick={clearDraft}>Töm paketet</Button>}
+                <Button variant="text" onClick={() => router.push('/reparationer')}>Tillbaka</Button>
                 <Button icon="local_shipping" disabled={!inBox.length || !kolli.trim() || busy || store.readOnly || !!missing} onClick={run}>
                   {busy ? 'Registrerar…' : `Registrera utskick · ${inBox.length} ${inBox.length === 1 ? 'enhet' : 'enheter'}`}
                 </Button>
