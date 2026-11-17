@@ -163,3 +163,24 @@ export async function receiveRepair(
   });
   return warnings;
 }
+
+/** Fix a typo in a shipment (parcel number, supplier, case number, date). */
+export async function editRepair(store: Store, r: RepairView, v: { kolli: string; lev: string; arende: string; skickad: string }) {
+  await store.update('reparationer', r.id, { Kollinummer: kolliKey(v.kolli), Leverantor: v.lev, Arendenummer: v.arende, Skickad: v.skickad });
+  await log(store, { typ: 'Reparation', enhetId: r.serial, detaljer: `Utskick ändrat: kolli ${kolliKey(v.kolli)}, ${v.lev}${v.arende ? `, ärende ${v.arende}` : ''}` });
+}
+
+/** Registered by mistake: removes the shipment and puts the device and fault back as they were before sending. */
+export async function deleteRepair(store: Store, r: RepairView) {
+  await store.remove('reparationer', r.id);
+  const d = r.device;
+  if (r.out && d) {
+    const h = d.holder;
+    const back = h ? (h.kind === 'utlaning' ? 'Utlånad – tillfälligt' : 'Tilldelad') : r.fault && isOpenCase(r.fault.Status) ? 'Trasig' : 'Tillgänglig';
+    await store.update('enheter', d.id, { Status: storedDeviceStatus(back) });
+    if (r.fault && str(r.fault.Status) === faultChoice(store, ['Skickad på reparation', 'Väntar på del/leverantör'], 'Skickad på reparation')) {
+      await setFault(store, r.fault, { Status: faultChoice(store, ['Pågående', 'Pågår', 'Ny'], 'Pågående') }, []);
+    }
+  }
+  await log(store, { typ: 'Reparation', enhetId: r.serial, detaljer: `Utskick borttaget (registrerat av misstag)${r.kolli ? ` · kolli ${r.kolli}` : ''}` });
+}

@@ -9,8 +9,8 @@ import { ProvisionLists } from '@/components/ProvisionLists';
 import { buildDevices, isOpenCase, serialKey, type DeviceView } from '@/lib/derive';
 import { todayIso } from '@/lib/format';
 import { REPAIR_OUT, SUPPLIERS, str, type Row } from '@/lib/lists';
-import { openFault, sendRepairs, warranty } from '@/lib/repair';
-import { kolliKey } from '@/lib/scan';
+import { buildRepairs, openFault, sendRepairs, warranty } from '@/lib/repair';
+import { cleanScan, kolliKey, looksLikeKolli } from '@/lib/scan';
 import { useStore } from '@/lib/store';
 
 const DRAFT = 'rk.repairDraft';
@@ -38,6 +38,8 @@ function SkickaInner() {
   const [arende, setArende] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [done, setDone] = React.useState<{ n: number; kolli: string } | null>(null);
+  const [more, setMore] = React.useState(false);
 
   // The parcel you are packing is kept on this computer until you register it — leaving the page loses nothing.
   const [restored, setRestored] = React.useState(false);
@@ -77,9 +79,10 @@ function SkickaInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored, pre, devices.length]);
 
+  // Devices already out (resolved even when the list lacks EnhetID) can't be packed again.
   const outSerials = React.useMemo(
-    () => new Set(store.data.reparationer.filter((r) => (str(r.Status) || REPAIR_OUT) === REPAIR_OUT).map((r) => serialKey(r.EnhetID))),
-    [store.data.reparationer],
+    () => new Set(buildRepairs(store.data, devices).filter((r) => r.out).map((r) => serialKey(r.serial))),
+    [store.data, devices],
   );
 
   const inBox = picked.map((s) => devices.find((d) => d.serial === s)).filter((d): d is DeviceView => !!d);
@@ -89,7 +92,8 @@ function SkickaInner() {
       .filter((f) => isOpenCase(f.Status))
       .sort((a, b) => b._created.localeCompare(a._created))
       .map((f) => ({ f, d: find(str(f.EnhetID)) }))
-      .filter((x): x is { f: Row; d: DeviceView } => !!x.d && !outSerials.has(serialKey(x.d.serial)) && !seen.has(x.d.serial) && !!seen.add(x.d.serial));
+      .filter((x): x is { f: Row; d: DeviceView } => !!x.d && !seen.has(x.d.serial) && !!seen.add(x.d.serial))
+      .sort((a, b) => Number(outSerials.has(serialKey(a.d.serial))) - Number(outSerials.has(serialKey(b.d.serial))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.data.felanmalningar, devices, outSerials]);
 
@@ -100,7 +104,12 @@ function SkickaInner() {
     const q = raw.trim();
     if (!q) return;
     const d = find(q);
-    if (!d) return setFb({ state: 'error', title: 'Hittades inte i Enheter', serial: q });
+    // The same field takes the parcel number: anything long and numeric that isn't a device.
+    if (!d && looksLikeKolli(q)) {
+      setKolli(kolliKey(q));
+      return setFb({ state: 'success', title: 'Kollinummer inläst', serial: kolliKey(q) });
+    }
+    if (!d) return setFb({ state: 'error', title: 'Hittades inte i Enheter', serial: cleanScan(q) });
     if (picked.includes(d.serial)) return setFb({ state: 'warning', title: 'Redan i paketet', serial: d.assetId || d.serial });
     if (outSerials.has(serialKey(d.serial))) return setFb({ state: 'error', title: 'Är redan ute på reparation', serial: d.assetId || d.serial });
     if (d.status === 'Kasserad') return setFb({ state: 'error', title: 'Enheten är kasserad', serial: d.assetId || d.serial });
@@ -115,10 +124,11 @@ function SkickaInner() {
       const w = await sendRepairs(store, inBox.map((d) => ({ device: d, fault: openFault(store.data, d.serial) })), { kolli: kolliKey(kolli), lev: supplier, arende: arende.trim(), skickad });
       try { localStorage.removeItem(DRAFT); } catch { /* ignore */ }
       store.toast({ icon: 'local_shipping', message: `${inBox.length} ${inBox.length === 1 ? 'enhet' : 'enheter'} skickade till ${supplier}` });
-      if (w.length) {
-        setWarnings(w);
-        setBusy(false);
-      } else router.push('/reparationer');
+      // Stay here for the next parcel; supplier and date are kept.
+      setDone({ n: inBox.length, kolli: kolliKey(kolli) });
+      setWarnings(w);
+      setPicked([]); setKolli(''); setArende(''); setFb(null);
+      setBusy(false);
     } catch (e) {
       store.toast({ icon: 'error', message: e instanceof Error ? e.message : String(e) });
       setBusy(false);
@@ -134,6 +144,12 @@ function SkickaInner() {
       {!ready ? <PageState /> : (
         <div className="stack" style={{ gap: 20 }}>
           <ProvisionLists keys={['reparationer']} />
+          {done && (
+            <Banner tone="success" icon="local_shipping" title={`Registrerat: ${done.n} ${done.n === 1 ? 'enhet' : 'enheter'} · kolli ${done.kolli}`}
+              action={<Button variant="outlined" size="sm" onClick={() => router.push('/reparationer')}>Visa i Reparationer</Button>}>
+              Skanna nästa paket direkt — leverantören är kvar.
+            </Banner>
+          )}
           {warnings.length > 0 && (
             <Banner tone="warning" title="Utskicket är registrerat, men felanmälan uppdaterades inte"
               action={<Button variant="outlined" size="sm" onClick={() => router.push('/reparationer')}>Till Reparationer</Button>}>
@@ -147,8 +163,8 @@ function SkickaInner() {
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, flex: 1 }}>Enheter i paketet</h2>
                 <Badge tone="primary">{inBox.length} st</Badge>
               </div>
-              <ScanInput size="lg" scanning autoFocus shortcut={false} placeholder="Skanna enhet (serienummer eller AssetID)…"
-                value={scanValue} onChange={(e) => setScanValue(e.target.value)} onScan={onScan} />
+              <ScanInput size="lg" scanning autoFocus shortcut={false} placeholder="Skanna enheterna — och sist kollinumret på fraktsedeln"
+                value={scanValue} onChange={(e) => { setScanValue(e.target.value); if (done) setDone(null); }} onScan={onScan} />
               {fb && <ScanFeedback state={fb.state} title={fb.title} serial={fb.serial} />}
 
               {inBox.map((d) => {
@@ -173,14 +189,18 @@ function SkickaInner() {
               {faults.length > 0 && (
                 <div className="stack" style={{ gap: 4, marginTop: 4 }}>
                   <div className="small" style={{ fontWeight: 600, color: 'var(--ink-muted)' }}>Eller välj från öppna felanmälningar</div>
-                  {faults.map(({ f, d }) => (
-                    <label key={d.serial} className="row" style={{ gap: 12, minHeight: 44, padding: '0 12px', borderRadius: 10, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={picked.includes(d.serial)} onChange={(e) => toggle(d, e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />
-                      <span className="mono" style={{ width: 90 }}>{d.assetId || d.serial}</span>
-                      <span style={{ flex: 1, minWidth: 0 }}>{str(f.TypAvFel) || str(f.Beskrivning)} <span className="muted">· {d.holder ? `${d.holder.namn} · ${d.holder.klass}` : d.modell}</span></span>
-                      <StatusBadge status={warranty(d.inkop).state} />
-                    </label>
-                  ))}
+                  {faults.map(({ f, d }) => {
+                    const away = outSerials.has(serialKey(d.serial));
+                    return (
+                      <label key={d.serial} className="row" title={away ? 'Redan skickad — ändra eller ta bort utskicket under Reparationer' : undefined}
+                        style={{ gap: 12, minHeight: 44, padding: '0 12px', borderRadius: 10, cursor: away ? 'not-allowed' : 'pointer', opacity: away ? 0.5 : 1 }}>
+                        <input type="checkbox" disabled={away} checked={away || picked.includes(d.serial)} onChange={(e) => toggle(d, e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />
+                        <span className="mono" style={{ width: 90 }}>{d.assetId || d.serial}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>{str(f.TypAvFel) || str(f.Beskrivning)} <span className="muted">· {d.holder ? `${d.holder.namn} · ${d.holder.klass}` : d.modell}</span></span>
+                        {away ? <StatusBadge status="Skickad på reparation" /> : <StatusBadge status={warranty(d.inkop).state} />}
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -192,7 +212,7 @@ function SkickaInner() {
               </div>
               <div data-scan><TextField label="Kollinummer *" mono leadingIcon="barcode_scanner" value={kolli} onChange={(e) => setKolli(e.target.value)} onBlur={() => setKolli((k) => kolliKey(k))}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setKolli((k) => kolliKey(k)); } }}
-                helper="Skanna streckkoden på fraktsedeln"
+                helper="Skannas i fältet till vänster — eller skriv det här"
                 trailing={<IconButton icon="photo_camera" label="Skanna med kameran" onClick={() => setKolliCam(true)} />} /></div>
               {kolliCam && <CameraScanner onClose={() => setKolliCam(false)} onResult={(t) => { setKolliCam(false); setKolli(kolliKey(t)); }} />}
               <div>
@@ -200,10 +220,16 @@ function SkickaInner() {
                 <SegmentedButton label="Leverantör" value={lev} onChange={setLev} options={SUPPLIERS.map((s) => ({ value: s, label: s }))} />
               </div>
               {lev === 'Annan' && <TextField label="Vilken leverantör?" value={annan} onChange={(e) => setAnnan(e.target.value)} placeholder="t.ex. Lenovo, Dustin" />}
-              <div className="form-grid">
-                <TextField label="Skickad" type="date" value={skickad} onChange={(e) => setSkickad(e.target.value)} />
-                <TextField label="Ärendenummer (valfritt)" mono value={arende} onChange={(e) => setArende(e.target.value)} placeholder="Leverantörens ärende" />
-              </div>
+              {more ? (
+                <div className="form-grid">
+                  <TextField label="Skickad" type="date" value={skickad} onChange={(e) => setSkickad(e.target.value)} />
+                  <TextField label="Leverantörens ärendenummer" mono value={arende} onChange={(e) => setArende(e.target.value)} placeholder="t.ex. 5104 882 371" />
+                </div>
+              ) : (
+                <button type="button" className="rk-btn rk-btn--text rk-btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setMore(true)}>
+                  <span className="rk-icon" aria-hidden>expand_more</span><span>Annat datum eller ärendenummer (valfritt)</span>
+                </button>
+              )}
               <div className="row" style={{ gap: 10, padding: '12px 14px', borderRadius: 12, background: 'var(--surface-container-low)', fontSize: 13, lineHeight: '18px', alignItems: 'flex-start' }}>
                 <Icon name="info" />
                 <span>Enheterna får status <b>Under reparation</b> och felanmälningarna flyttas till <b>Skickad på reparation</b>. Eleverna behåller sin tilldelning.</span>

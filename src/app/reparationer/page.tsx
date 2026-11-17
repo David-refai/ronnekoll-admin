@@ -7,6 +7,7 @@ import { FilterMenu } from '@/components/FilterMenu';
 import { PageState, useReady } from '@/components/PageState';
 import { ProvisionLists } from '@/components/ProvisionLists';
 import { ListColumnsCheck } from '@/components/ListColumnsCheck';
+import { RepairSheet } from '@/components/RepairSheet';
 import { buildDevices, unique } from '@/lib/derive';
 import { exportXlsx } from '@/lib/export';
 import { shortDate } from '@/lib/format';
@@ -32,6 +33,8 @@ export default function Reparationer() {
   const [tab, setTab] = React.useState('ute');
   const [lev, setLev] = React.useState<string | null>(null);
   const [gar, setGar] = React.useState<string | null>(null);
+  const [openId, setOpenId] = React.useState<string | null>(null);
+  const opened = openId ? all.find((r) => r.id === openId) : undefined;
 
   const missing = store.mode === 'live' && store.connection && !store.connection.lists.reparationer;
   const out = all.filter((r) => r.out);
@@ -127,7 +130,7 @@ export default function Reparationer() {
 
           {rows.length ? (
             <DataTable<RRow> columns={shown} rows={rows} density="compact"
-              onRowClick={(r) => (r.out ? router.push(`/reparationer/ta-emot?enhet=${encodeURIComponent(r.serial)}`) : r.device && router.push(`/enheter?open=${encodeURIComponent(r.device.serial)}`))}
+              onRowClick={(r) => setOpenId(r.id)}
               footer={<><span>Garanti räknas från inköpsdatum + {WARRANTY_YEARS} år</span><span>{out.length} ute · {back30} tillbaka senaste 30 dagarna</span></>} />
           ) : (
             <div className="rk-card" style={{ padding: 0 }}>
@@ -139,6 +142,7 @@ export default function Reparationer() {
           )}
         </div>
       )}
+      {opened && <RepairSheet key={opened.id} r={opened} onClose={() => setOpenId(null)} />}
     </>
   );
 }
